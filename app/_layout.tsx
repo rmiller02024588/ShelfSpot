@@ -1,24 +1,31 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import * as React from 'react';
+import { BottomNavigation, PaperProvider } from 'react-native-paper';
+import HomeScreen from './index';
+import ProfileScreen from './profileScreen';
+import SettingsScreen from './settingsScreen';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [index, setIndex] = React.useState(0);
+  
+  const [routes] = React.useState([
+    { key: 'home', title: 'Home', focusedIcon: 'home', unfocusedIcon: 'home-outline' },
+    { key: 'profile', title: 'Profile', focusedIcon: 'account', unfocusedIcon: 'account-outline' },
+    { key: 'settings', title: 'Settings', focusedIcon: 'cog', unfocusedIcon: 'cog-outline' },
+  ]);
+
+  const renderScene = BottomNavigation.SceneMap({
+    home: () => <HomeScreen />,
+    profile: () => <ProfileScreen />,
+    settings: () => <SettingsScreen />,
+  });
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <PaperProvider>
+      <BottomNavigation
+        navigationState={{ index, routes }}
+        onIndexChange={setIndex}
+        renderScene={renderScene}
+      />
+    </PaperProvider>
   );
 }

@@ -8,9 +8,9 @@ export default function RootLayout() {
   const [index, setIndex] = React.useState(0);
   
   const [routes] = React.useState([
-    { key: 'home', title: 'Home', focusedIcon: 'home', unfocusedIcon: 'home-outline' },
-    { key: 'profile', title: 'Profile', focusedIcon: 'account', unfocusedIcon: 'account-outline' },
-    { key: 'settings', title: 'Settings', focusedIcon: 'cog', unfocusedIcon: 'cog-outline' },
+    { key: 'home', title: 'Home', focusedIcon: 'home', unfocusedIcon: 'home-outline', testID: 'HomeScreen' },
+    { key: 'profile', title: 'Profile', focusedIcon: 'account', unfocusedIcon: 'account-outline', testID: 'ProfileScreen' },
+    { key: 'settings', title: 'Settings', focusedIcon: 'cog', unfocusedIcon: 'cog-outline', testID: 'SettingsScreen' },
   ]);
 
   const renderScene = BottomNavigation.SceneMap({

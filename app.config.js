@@ -51,7 +51,6 @@ export default {
           }
         }
       ]
-      // 👈 react-native-maps removed from here
     ],
     experiments: {
       typedRoutes: true,

@@ -14,7 +14,7 @@ export default {
       supportsTablet: true,
       bundleIdentifier: "com.yourname.test1",
       config: {
-        googleMapsApiKey: process.env.AIzaSyBCCXQXzxHNiCPE9dZa_HK9DketbZ0EO94
+        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY
       }
     },
     android: {
@@ -29,7 +29,7 @@ export default {
       package: "com.yourname.test1",
       config: {
         googleMaps: {
-          apiKey: process.env.AIzaSyBCCXQXzxHNiCPE9dZa_HK9DketbZ0EO94
+          apiKey: process.env.GOOGLE_MAPS_API_KEY
         }
       }
     },

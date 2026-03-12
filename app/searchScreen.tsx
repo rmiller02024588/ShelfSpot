@@ -1,16 +1,6 @@
 import { useState } from 'react';
-import { SafeAreaView, StyleSheet, TextInput } from 'react-native';
-
-const styles = StyleSheet.create ({
-    searchBox: { 
-        paddingHorizontal: 10, 
-        paddingVertical: 10, 
-        borderColor: "#ccc", 
-        borderWidth: 1, 
-        borderRadius: 8,
-        color: '#fff'
-    }
-});
+import { TextInput, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SearchScreen() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -18,15 +8,27 @@ export default function SearchScreen() {
     const handleSearch = (query: string) => {
         setSearchQuery(query);
     }
+
+    const scheme = useColorScheme();
+    const textColor = scheme === 'dark' ? '#fff' : '#000';
+
   return (
     <SafeAreaView style = {{ flex: 1, marginHorizontal: 20 }}>
       <TextInput placeholder = "Search" 
       clearButtonMode = "always"
-      style = {styles.searchBox} 
+      style = {{ 
+        paddingHorizontal: 10, 
+        paddingVertical: 10, 
+        borderColor: "#ccc", 
+        borderWidth: 1, 
+        borderRadius: 8,
+        color: textColor
+      }}
       autoCapitalize= "none"
       autoCorrect = {false}
       value = {searchQuery}
-      onChangeText = {(query) => handleSearch(query)}
+      onChangeText = {(query) => handleSearch(query)
+      }
       />
     </SafeAreaView>
   );

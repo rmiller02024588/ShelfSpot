@@ -37,6 +37,7 @@
     "expo-system-ui": "~6.0.9",
     "expo-web-browser": "~15.0.10",
     "jest": "~29.7.0",
+    "jest-expo": "~54.0.17",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
     "react-native-elements": "^3.4.3",

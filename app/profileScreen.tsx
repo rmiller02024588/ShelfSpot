@@ -1,10 +1,14 @@
 import React from "react";
-import { Button, Image, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { Alert, Button, Image, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { Appbar } from 'react-native-paper';
 
 export default function ProfileScreen() {
   const scheme = useColorScheme();
   const textColor = scheme === 'dark' ? '#fff' : '#000';
+
+  const onPress = () => {
+    Alert.alert('You pressed the button ;)');
+  };
 
   return (
     <View style={{ flex: 1}}>
@@ -19,7 +23,7 @@ export default function ProfileScreen() {
           justifyContent: 'center', 
           alignSelf: 'center', 
           marginTop: 20
-        }} />
+        }} /> 
 
         <Text style={{ 
           color: textColor, 
@@ -32,21 +36,21 @@ export default function ProfileScreen() {
             <Button
               title="Change Profile Picture"
               color={"#FFF"}
-              onPress={() => {}}
+              onPress={() => {onPress()}}
             />
           </View>
           <View style={styles.buttonWrapper}>
             <Button
               title="Change Username"
               color={"#FFF"}
-              onPress={() => {}}
+              onPress={() => {onPress()}}
             />
           </View>
           <View style={styles.buttonWrapper}>
             <Button
               title="Change Password"
               color={"#FFF"}
-              onPress={() => {}}
+              onPress={() => {onPress()}}
             />
           </View>
         </View>

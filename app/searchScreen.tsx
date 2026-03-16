@@ -1,6 +1,6 @@
 
 import Post from '@/components/post';
-import filter from "lodash.filter";
+import filter from 'lodash/filter';
 import { useEffect, useState } from 'react';
 import { FlatList, Text, TextInput, useColorScheme, View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';

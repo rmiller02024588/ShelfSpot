@@ -15,7 +15,7 @@ export default function HomeScreen() {
                 <Badge>{3}</Badge>
             </View>
             <Appbar.Content title="Shelf Spot" />
-            <Appbar.Action icon="plus-circle-outline" onPress={() => {}} />
+            <Appbar.Action testID="add-post-button" icon="plus-circle-outline" onPress={() => {}} />
         </Appbar.Header>
         <Post
             title="John Doe"

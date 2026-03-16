@@ -5,7 +5,7 @@ import { Button, TextInput } from "react-native-paper";
 import { auth } from "../Firebaseconfig";
 
 
-export default function LoginScreen({ onGoToSignup }: { onGoToSignup?: () => void }) {
+export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void }) {
 
   const scheme = useColorScheme();
   const textColor = scheme === 'dark' ? '#fff' : '#000';
@@ -29,14 +29,14 @@ export default function LoginScreen({ onGoToSignup }: { onGoToSignup?: () => voi
     }
   }
 
-
+  
 
   return (
     <View style={styles.container}>
       <TextInput placeholder="Email" onChangeText={setEmail} />
       <TextInput placeholder="Password" onChangeText={setPassword} secureTextEntry />
-      <Button dark={true} mode="contained" onPress={login}>Login</Button>
-      <Button textColor={textColor} dark={true} mode="contained" onPress={onGoToSignup}>Don't have an account? Sign Up!</Button>
+      <Button dark={true} mode="contained" onPress={makeAccount}>Sign Up</Button>
+      <Button dark={true} mode="contained" onPress={onGoToLogin}>Back to Login</Button>
     </View>
   );
 }

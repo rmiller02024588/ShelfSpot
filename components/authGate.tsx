@@ -9,12 +9,15 @@ import MapScreen from "../app/mapScreen";
 import ProfileScreen from "../app/profileScreen";
 import SearchScreen from "../app/searchScreen";
 import SettingsScreen from "../app/settingsScreen";
+import SignUpScreen from './../app/signUpScreen';
+
 
 export default function AuthGate() {
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [index, setIndex] = useState(0);
+  const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
 
@@ -36,7 +39,9 @@ export default function AuthGate() {
   }
 
   if (!user) {
-    return <LoginScreen />;
+    return authScreen === 'login' 
+    ? <LoginScreen onGoToSignup={() => setAuthScreen('signup')} />
+    : <SignUpScreen onGoToLogin={() => setAuthScreen('login')} />;
   }
 
   const [routes] = useState([

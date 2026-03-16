@@ -1,0 +1,4 @@
+TODO
+- Create a sign up button and signup screen
+- have the auth gate detect if not current email displays an error
+- fully write tests 

@@ -36,7 +36,7 @@ export default function LoginScreen({ onGoToSignup }: { onGoToSignup?: () => voi
       <TextInput placeholder="Email" onChangeText={setEmail} />
       <TextInput placeholder="Password" onChangeText={setPassword} secureTextEntry />
       <Button dark={true} mode="contained" onPress={login}>Login</Button>
-      <Button textColor={textColor} dark={true} mode="contained" onPress={onGoToSignup}>Don't have an account? Sign Up!</Button>
+      <Button dark={true} mode="contained" onPress={onGoToSignup}>Don't have an account? Sign Up!</Button>
     </View>
   );
 }

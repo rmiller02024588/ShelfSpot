@@ -18,9 +18,16 @@ export default function HomeScreen() {
             <Appbar.Action icon="plus-circle-outline" onPress={() => {}} />
         </Appbar.Header>
         <Post
-            title="John Doe"
+            title="Jon Snow"
             subtitle="2 hours ago"
-            content="this is a post"
+            content="I found Pepsi Nitro at Castle Black! It's amazing!"
+            image="https://pepsimidamerica.com/wp-content/uploads/2022/04/pepsi-mid-america-marion-illinois-nitro-pepsi-draft-cola.jpg"
+        />
+        <Post
+            title="Ser Duncan"
+            subtitle="8 hours ago"
+            content="I found Skittles Pop'd at the Inn at the Crossroads!"
+            image="https://target.scene7.com/is/image/Target/GUEST_f146398b-3fef-4f14-bc51-bafaf8660f87?wid=300&hei=300&fmt=pjpeg"
         />
     </View>
   );

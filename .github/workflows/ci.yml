@@ -29,3 +29,11 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build app
+        run: eas build --platform all --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

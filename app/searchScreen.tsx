@@ -120,6 +120,7 @@ export default function SearchScreen() {
           title={item.name.first + " " + item.name.last}
           subtitle="Posted 1 hour ago"
           content="I found Pepsi Nitro at Cumnock Hall!!"
+          image='https://pepsimidamerica.com/wp-content/uploads/2022/04/pepsi-mid-america-marion-illinois-nitro-pepsi-draft-cola.jpg'
         />
       )}
       />

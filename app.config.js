@@ -2,17 +2,20 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "test1",
-    slug: "test1",
+    name: "ShelfSpot",
+    slug: "ShelfSpot",
+    extra: {
+        eas: { projectId: "2dba6a7b-c82f-43a4-8c7f-98f479e635c6" }
+    },
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/icon.png",
-    scheme: "test1",
+    scheme: "ShelfSpot",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.yourname.test1",
+      bundleIdentifier: "com.yourname.ShelfSpot",
       config: {
         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY
       }
@@ -26,7 +29,7 @@ export default {
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
-      package: "com.yourname.test1",
+      package: "com.yourname.ShelfSpot",
       config: {
         googleMaps: {
           apiKey: process.env.GOOGLE_MAPS_API_KEY
@@ -55,6 +58,6 @@ export default {
     experiments: {
       typedRoutes: true,
       reactCompiler: true
-    }
+    },
   }
 };

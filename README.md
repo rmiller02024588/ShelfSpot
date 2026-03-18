@@ -1,50 +1,53 @@
-# Welcome to your Expo app 👋
+# ShelfSpot
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
+<!-- Describe what ShelfSpot does and who it's for -->
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+- React Native 0.81.5 + Expo 54
+- Firebase v12 (Auth + Firestore)
+- React Native Paper (UI)
+- React Native Maps
+- Jest + jest-expo (testing)
 
-   ```bash
-   npm install
-   ```
+## Prerequisites
 
-2. Start the app
+- Node.js v18+
+- Expo Go app installed on your device or Android emulator via Android Studio
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup & Installation
 
 ```bash
-npm run reset-project
+git clone https://github.com/rmiller02024588/ShelfSpot.git
+cd ShelfSpot
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Running the App
 
-## Learn more
+```bash
+npx expo start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Then press `a` to open on Android emulator, or scan the QR code with Expo Go.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Running Tests
 
-## Join the community
+```bash
+npm test
+```
 
-Join our community of developers creating universal apps.
+## Project Structure
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+ShelfSpot/
+├── app/              # Screens (file-based routing via Expo Router)
+├── components/       # Shared components (AuthGate, etc.)
+├── __test__/         # Unit tests
+├── Firebaseconfig.ts # Firebase initialization
+└── .github/          # CI workflows
+```
+
+## Contributing
+<!-- Describe branching strategy and PR process -->

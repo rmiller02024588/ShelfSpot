@@ -31,7 +31,10 @@ jobs:
         run: npm test
 
       - name: Install EAS CLI
-        run: npm install -g eas-cli
+        run: |
+          npm cache clean --force
+          npm install -g eas-cli@latest
+          eas --version
 
       - name: Build app
         run: eas build --platform all --non-interactive

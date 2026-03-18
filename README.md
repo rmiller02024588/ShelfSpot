@@ -1,7 +1,9 @@
 # ShelfSpot
 
 ## Overview
-<!-- Describe what ShelfSpot does and who it's for -->
+ShelfSpot is a crowd-sourced mobile platform for finding niche and limited-time food and drink products in stores near you. It's built for niche snack enthusiasts who are tired of visiting multiple stores based on outdated inventory information.
+
+Users can post sightings of niche and limited-time items, included in these posts is the store location, a photo, and description, so that other users can find these niche items. Posts are shown through a location-based feed, a keyword search, and an interactive map, making it easy to find exactly what you're looking.
 
 ## Tech Stack
 
@@ -9,12 +11,32 @@
 - Firebase v12 (Auth + Firestore)
 - React Native Paper (UI)
 - React Native Maps
+- Google Maps API
 - Jest + jest-expo (testing)
 
 ## Prerequisites
 
-- Node.js v18+
-- Expo Go app installed on your device or Android emulator via Android Studio
+**Node.js v18+** — download and install from [nodejs.org](https://nodejs.org/). Select the LTS version.
+
+To verify your Node.js installation, run:
+```bash
+node -v
+```
+You should see `v18.0.0` or higher.
+
+There are 3 ways to run ShelfSpot. Install the prerequisites for whichever you prefer:
+
+### Option 1: Physical Device (Easiest Option)
+- Install **Expo Go** on your phone from the [App Store](https://apps.apple.com/app/expo-go/id982107779) or [Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
+
+### Option 2: Android Emulator
+- Install **Android Studio** from [developer.android.com/studio](https://developer.android.com/studio)
+- Set up a virtual device via the AVD Manager inside Android Studio
+
+### Option 3: iOS Simulator (macOS only)
+- Install **Xcode** from the Mac App Store
+
+> **Having trouble?** Refer to the [Expo environment setup guide](https://docs.expo.dev/get-started/set-up-your-environment/?platform=android&device=physical) for detailed instructions and troubleshooting.
 
 ## Setup & Installation
 
@@ -30,7 +52,7 @@ npm install
 npx expo start
 ```
 
-Then press `a` to open on Android emulator, or scan the QR code with Expo Go.
+Then Scan the QR code with Expo Go, or press `a` to open on Android emulator, or or press `i` to open on iOS simulator.
 
 ## Running Tests
 
@@ -48,6 +70,3 @@ ShelfSpot/
 ├── Firebaseconfig.ts # Firebase initialization
 └── .github/          # CI workflows
 ```
-
-## Contributing
-<!-- Describe branching strategy and PR process -->

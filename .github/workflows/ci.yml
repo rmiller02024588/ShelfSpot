@@ -37,6 +37,6 @@ jobs:
           eas --version
 
       - name: Build app
-        run: eas build --platform all --non-interactive
+        run: eas build --platform android --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

@@ -1,7 +1,9 @@
 # ShelfSpot
 
 ## Overview
-ShelfSpot is a crowd-sourced mobile platform for finding niche and limited-time food and drink products in stores near you. It's built for niche snack enthusiasts who are tired of visiting multiple stores based on outdated inventory information.
+Tired of not being able to find your favorite niche snacks in store?
+
+Try ShelfSpot, a crowd-sourced mobile platform for finding niche and limited-time food and drink products in stores near you. It's built for niche snack enthusiasts who are tired of visiting multiple stores based on outdated inventory information.
 
 Users can post sightings of niche and limited-time items, included in these posts is the store location, a photo, and description, so that other users can find these niche items. Posts are shown through a location-based feed, a keyword search, and an interactive map, making it easy to find exactly what you're looking.
 
@@ -59,6 +61,10 @@ Then Scan the QR code with Expo Go, or press `a` to open on Android emulator, or
 ```bash
 npm test
 ```
+
+## Continuous Integration
+
+This project uses GitHub Actions for continuous integration. Every push and pull request to `master` automatically runs the test suite. Build history and logs are visible under the **Actions** tab of this repository.
 
 ## Project Structure
 

@@ -1,50 +1,78 @@
-# Welcome to your Expo app 👋
+# ShelfSpot
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
+Tired of not being able to find your favorite niche snacks in store?
 
-## Get started
+Try ShelfSpot, a crowd-sourced mobile platform for finding niche and limited-time food and drink products in stores near you. It's built for niche snack enthusiasts who are tired of visiting multiple stores based on outdated inventory information.
 
-1. Install dependencies
+Users can post sightings of niche and limited-time items, included in these posts is the store location, a photo, and description, so that other users can find these niche items. Posts are shown through a location-based feed, a keyword search, and an interactive map, making it easy to find exactly what you're looking.
 
-   ```bash
-   npm install
-   ```
+## Tech Stack
 
-2. Start the app
+- React Native 0.81.5 + Expo 54
+- Firebase v12 (Auth + Firestore)
+- React Native Paper (UI)
+- React Native Maps
+- Google Maps API
+- Jest + jest-expo (testing)
 
-   ```bash
-   npx expo start
-   ```
+## Prerequisites
 
-In the output, you'll find options to open the app in a
+**Node.js v18+** — download and install from [nodejs.org](https://nodejs.org/). Select the LTS version.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+To verify your Node.js installation, run:
+```bash
+node -v
+```
+You should see `v18.0.0` or higher.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+There are 3 ways to run ShelfSpot. Install the prerequisites for whichever you prefer:
 
-## Get a fresh project
+### Option 1: Physical Device (Easiest Option)
+- Install **Expo Go** on your phone from the [App Store](https://apps.apple.com/app/expo-go/id982107779) or [Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
 
-When you're ready, run:
+### Option 2: Android Emulator
+- Install **Android Studio** from [developer.android.com/studio](https://developer.android.com/studio)
+- Set up a virtual device via the AVD Manager inside Android Studio
+
+### Option 3: iOS Simulator (macOS only)
+- Install **Xcode** from the Mac App Store
+
+> **Having trouble?** Refer to the [Expo environment setup guide](https://docs.expo.dev/get-started/set-up-your-environment/?platform=android&device=physical) for detailed instructions and troubleshooting.
+
+## Setup & Installation
 
 ```bash
-npm run reset-project
+git clone https://github.com/rmiller02024588/ShelfSpot.git
+cd ShelfSpot
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Running the App
 
-## Learn more
+```bash
+npx expo start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Then Scan the QR code with Expo Go, or press `a` to open on Android emulator, or or press `i` to open on iOS simulator.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Running Tests
 
-## Join the community
+```bash
+npm test
+```
 
-Join our community of developers creating universal apps.
+## Continuous Integration
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+This project uses GitHub Actions for continuous integration. Every push and pull request to `master` automatically runs the test suite. Build history and logs are visible under the **Actions** tab of this repository.
+
+## Project Structure
+
+```
+ShelfSpot/
+├── app/              # Screens (bottom nav from react native paper)
+├── components/       # Shared components (AuthGate, etc.)
+├── __test__/         # Unit tests
+├── Firebaseconfig.ts # Firebase initialization
+└── .github/          # CI workflows
+```

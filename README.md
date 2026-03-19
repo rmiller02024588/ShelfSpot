@@ -70,7 +70,7 @@ This project uses GitHub Actions for continuous integration. Every push and pull
 
 ```
 ShelfSpot/
-├── app/              # Screens (Bottom Nav Bar for Screen Navigation)
+├── app/              # Screens (Bottom nav react-native paper)
 ├── components/       # Shared components (AuthGate, etc.)
 ├── __test__/         # Unit tests
 ├── Firebaseconfig.ts # Firebase initialization

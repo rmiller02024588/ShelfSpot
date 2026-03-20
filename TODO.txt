@@ -1,5 +1,13 @@
 TODO
+
 GET THE APPLE BUILD WORKING
+
+General UI/Beautification
+    - Big Logo
+    - Small Logo
+    - Set the color Scheme for the app
+        ~ Both a light and Dark Verison
+
 User posts
     - create databse to store the posts
     - how to load them dynamically
@@ -21,4 +29,5 @@ seetings screen/auth implementation:
  - forgot password button
  - again create user database
  - able to change username and prof picture
+ - Light/Dark Mode
  

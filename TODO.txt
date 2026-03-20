@@ -1,3 +1,24 @@
 TODO
- - User posts
+GET THE APPLE BUILD WORKING
+User posts
+    - create databse to store the posts
+    - how to load them dynamically
+    - posts styling
+    - post filtering (area, item type)
+    - Search results
+    - Link posts to users
+
+Map screen
+ - update map screen when databse changes
+ - expo location library inegration
+ - displaying some sort of icon on the map (probably not images for performance reasons)
+
+profile screen
+ - add real data per users
+ - add a databse for users that include posts and followers and such
+
+seetings screen/auth implementation:
+ - forgot password button
+ - again create user database
+ - able to change username and prof picture
  

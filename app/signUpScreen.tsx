@@ -1,14 +1,14 @@
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import React, { useState } from "react";
-import { StyleSheet, View, useColorScheme } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
 import { auth } from "../Firebaseconfig";
 
 
 export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void }) {
 
-  const scheme = useColorScheme();
-  const textColor = scheme === 'dark' ? '#fff' : '#000';
+  // const scheme = useColorScheme();
+  // const textColor = scheme === 'dark' ? '#fff' : '#000';
 
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");

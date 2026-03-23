@@ -20,6 +20,7 @@ Map screen
  - update map screen when databse changes
  - expo location library inegration
  - displaying some sort of icon on the map (probably not images for performance reasons)
+ - turn off the map if there is no location service enabled?
 
 profile screen
  - add real data per users

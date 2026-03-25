@@ -9,6 +9,7 @@ module.exports = {
     '^firebase/auth$': '<rootDir>/__mocks__/firebase/auth.js',
     '^firebase/app$': '<rootDir>/__mocks__/firebase/app.js',
     '^@react-native-async-storage/async-storage$': '<rootDir>/__mocks__/async-storage.js',
+    '^@expo/vector-icons$': '<rootDir>/__mocks__/@expo/vector-icons.js',
   },
   testMatch: ['**/__test__/**/*.test.(ts|tsx|js)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],

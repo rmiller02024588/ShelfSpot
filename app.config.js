@@ -43,6 +43,12 @@ export default {
     plugins: [
       "expo-router",
       [
+        "expo-location",
+        {
+            "locationAlwaysAndWhenInUsePermission": "Allow ShelfSpot to access your location.",
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           image: "./assets/images/splash-icon.png",

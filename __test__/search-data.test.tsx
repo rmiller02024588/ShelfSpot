@@ -11,6 +11,11 @@ global.fetch = jest.fn(() =>
   })
 );
 
+// Add beforeEach to clear mocks between tests
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 test('displays fetched user data', async () => {
   const { getByText } = render(<SearchScreen />);
   await waitFor(() => expect(getByText('John Doe')).toBeTruthy());

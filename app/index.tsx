@@ -1,7 +1,7 @@
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import * as React from 'react';
-import { ActivityIndicator, FlatList, View } from 'react-native';
-import { Appbar, Badge } from 'react-native-paper';
+import { FlatList, View } from 'react-native';
+import { Appbar } from 'react-native-paper';
 import { db } from '../Firebaseconfig';
 import Post from '../components/post';
 
@@ -14,51 +14,51 @@ interface PostData {
   time: any;
 }
 
-export default function HomeScreen() {
+type HomeScreenProps = {
+  onAddPost: () => void;
+};
+
+export default function HomeScreen({ onAddPost }: HomeScreenProps) {
   const [posts, setPosts] = React.useState<PostData[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const fetchPosts = async () => {
+    setRefreshing(true);
+    const q = query(collection(db, 'posts'), orderBy('time', 'desc'));
+    const snapshot = await getDocs(q);
+    const fetched = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data() as Omit<PostData, 'id'>
+    }));
+    setPosts(fetched);
+    setRefreshing(false);
+  };
 
   React.useEffect(() => {
-    const q = query(collection(db, 'posts'), orderBy('time', 'desc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetched = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data() as Omit<PostData, 'id'>
-      }));
-      setPosts(fetched);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    fetchPosts();
   }, []);
 
   return (
     <View style={{ flex: 1 }}>
       <Appbar.Header>
-        <View style={{ justifyContent: 'center', marginRight: 10, marginLeft: 10 }}>
-          <Badge>{posts.length}</Badge>
-        </View>
         <Appbar.Content title="Shelf Spot" />
-        <Appbar.Action testID="add-post-button" icon="plus-circle-outline" onPress={() => {}} />
+        <Appbar.Action testID="add-post-button" icon="plus-circle-outline" onPress={onAddPost} />
       </Appbar.Header>
 
-      {loading ? (
-        <ActivityIndicator style={{ marginTop: 20 }} />
-      ) : (
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Post
-              title={item.author}
-              subtitle={item.time?.toDate().toLocaleString() ?? ''}
-              content={`${item.item} — ${item.description}`}
-              image={item.imageURL}
-            />
-          )}
-        />
-      )}
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        refreshing={refreshing}
+        onRefresh={fetchPosts}
+        renderItem={({ item }) => (
+          <Post
+            title={item.author}
+            subtitle={item.time?.toDate().toLocaleString() ?? ''}
+            content={`${item.item} — ${item.description}`}
+            image={item.imageURL}
+          />
+        )}
+      />
     </View>
   );
 }

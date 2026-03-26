@@ -9,12 +9,11 @@ General UI/Beautification
         ~ Both a light and Dark Verison
 
 User posts
-    - create databse to store the posts
-    - how to load them dynamically
-    - posts styling
+    - update posts styling
     - post filtering (area, item type)
-    - Search results
-    - Link posts to users
+    - Search results (not case sensitive)
+    - require text in post text boxes
+    - images
 
 Map screen
  - update map screen when databse changes

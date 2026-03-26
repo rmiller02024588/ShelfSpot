@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, TextInput } from "react-native-paper";
@@ -6,30 +6,16 @@ import { auth } from "../Firebaseconfig";
 
 
 export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void }) {
-
-  // const scheme = useColorScheme();
-  // const textColor = scheme === 'dark' ? '#fff' : '#000';
-
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
 
-  const login = async () => {
+  const makeAccount = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      createUserWithEmailAndPassword(auth, email, password);
     } catch (error) {
       console.log(error);
     }
-  };
-
-  const makeAccount = async () => {
-    try {
-        createUserWithEmailAndPassword(auth, email, password);
-    } catch (error) {
-        console.log(error);
-    }
   }
-
-  
 
   return (
     <View style={styles.container}>
@@ -40,8 +26,6 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
     </View>
   );
 }
-
-
 
 const styles = StyleSheet.create({
   container: {

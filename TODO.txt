@@ -9,11 +9,8 @@ General UI/Beautification
         ~ Both a light and Dark Verison
 
 User posts
-    - update posts styling
     - post filtering (area, item type)
-    - Search results (not case sensitive)
-    - require text in post text boxes
-    - images
+    - Firebase storage (store images)
 
 Map screen
  - update map screen when databse changes

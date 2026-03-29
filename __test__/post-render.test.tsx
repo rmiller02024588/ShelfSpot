@@ -4,8 +4,17 @@ import Post from '../components/post';
 
 test('renders post with title and content', () => {
   const { getByText } = render(
-    <Post title="Test Title" subtitle="1 hour ago" content="Test content" />
+    <Post
+      author="John Doe"
+      item="Test Item"
+      description="Test content"
+      address="123 Main St"
+      image=""
+      time="2 hours ago"
+    />
   );
-  expect(getByText('Test Title')).toBeTruthy();
+  expect(getByText('Test Item')).toBeTruthy();
   expect(getByText('Test content')).toBeTruthy();
+  expect(getByText('John Doe')).toBeTruthy();
+  expect(getByText('123 Main St')).toBeTruthy();
 });

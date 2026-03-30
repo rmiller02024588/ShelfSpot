@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
+import { auth } from '../Firebaseconfig';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../Firebaseconfig';
+import Post from '../components/post';
 
-const MOCK_POSTS = Array.from({ length: 9 }, (_, i) => ({ id: String(i) }));
 const MOCK_SAVES = Array.from({ length: 4 }, (_, i) => ({ id: String(i) }));
 
-const Header = ({ tab, onTabChange }: { tab: 'posts' | 'saves'; onTabChange: (t: 'posts' | 'saves') => void }) => (
+const Header = ({ tab, onTabChange, postCount }: { tab: 'posts' | 'saves'; onTabChange: (t: 'posts' | 'saves') => void; postCount: number }) => (
   <View style={styles.header}>
     <View style={styles.avatarRow}>
       <Avatar.Text size={90} label="JD" style={styles.avatar} color="#fff" />
       <View style={styles.stats}>
         <View style={styles.stat}>
-          <Text style={styles.statNum}>12</Text>
-          <Text style={styles.statLabel}>Saves</Text>
+          <Text style={styles.statNum}>{postCount}</Text>
+          <Text style={styles.statLabel}>Snacks</Text>
         </View>
         <View style={styles.stat}>
           <Text style={styles.statNum}>300</Text>
@@ -40,15 +43,42 @@ const Header = ({ tab, onTabChange }: { tab: 'posts' | 'saves'; onTabChange: (t:
 
 export default function ProfileScreen() {
   const [tab, setTab] = useState<'posts' | 'saves'>('posts');
-  const data = tab === 'posts' ? MOCK_POSTS : MOCK_SAVES;
+  const [posts, setPosts] = useState<any[]>([]);
+  const data = tab === 'posts' ? posts : MOCK_SAVES;
+  const user = auth.currentUser;
+
+  // Query posts by user email, get a snapshot, turn into js objects and catch in an Array, make array available for rendering
+  const fetchPosts = async () => {
+    const q = query(collection(db, 'posts'), where('author', '==', user?.email));
+    const snapshot = await getDocs(q);
+    const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    setPosts(fetched);
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
   return (
     <FlatList
       key={tab}
       data={data}
       keyExtractor={(item) => item.id}
-      ListHeaderComponent={<Header tab={tab} onTabChange={setTab} />}
-      renderItem={() => <View style={styles.postTile} />}
+      ListHeaderComponent={<Header tab={tab} onTabChange={setTab} postCount={posts.length} />}
+      renderItem={({ item }) => (
+        tab === 'posts' ? (
+          <Post
+            author={item.author ?? 'Unknown'}
+            time={item.time?.toDate().toLocaleString() ?? ''}
+            item={item.item}
+            description={item.description}
+            address={item.address}
+            image={item.imageURL}
+          />
+        ) : (
+          <View style={styles.postTile} />
+        )
+      )}
       contentContainerStyle={styles.list}
     />
   );

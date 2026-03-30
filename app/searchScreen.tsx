@@ -12,6 +12,7 @@ interface PostData {
   imageURL: string;
   item: string;
   time: any;
+  address: string;
 }
 
 export default function SearchScreen() {
@@ -58,7 +59,6 @@ export default function SearchScreen() {
           borderRadius: 8,
           color: textColor
         }}
-        autoCapitalize="none"
         autoCorrect={false}
         value={searchQuery}
         onChangeText={(text) => setSearchQuery(text)}
@@ -71,9 +71,11 @@ export default function SearchScreen() {
         onRefresh={() => fetchPosts(searchQuery)}
         renderItem={({ item }) => (
           <Post
-            title={item.author}
-            subtitle={item.time?.toDate().toLocaleString() ?? ''}
-            content={`${item.item} — ${item.description}`}
+            author={item.author}
+            time={item.time?.toDate().toLocaleString() ?? ''}
+            item={item.item}
+            description={item.description}
+            address={item.address}
             image={item.imageURL}
           />
         )}

@@ -11,6 +11,7 @@ interface PostData {
   description: string;
   imageURL: string;
   item: string;
+  address: string;
   time: any;
 }
 
@@ -52,9 +53,11 @@ export default function HomeScreen({ onAddPost }: HomeScreenProps) {
         onRefresh={fetchPosts}
         renderItem={({ item }) => (
           <Post
-            title={item.author}
-            subtitle={item.time?.toDate().toLocaleString() ?? ''}
-            content={`${item.item} — ${item.description}`}
+            author={item.author}
+            time={item.time?.toDate().toLocaleString() ?? ''}
+            item={item.item}
+            description={item.description}
+            address={item.address}
             image={item.imageURL}
           />
         )}

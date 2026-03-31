@@ -24,7 +24,7 @@ const COLORS = {
 export default function PostCard({ author, item, description, address, image, time }: PostCardProps) {
   const [saved, setSaved] = useState(false);
 
-  const initials = author
+  const initials = (author ?? '')
     .split(' ')
     .map(w => w[0])
     .join('')

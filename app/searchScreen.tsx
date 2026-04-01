@@ -1,128 +1,84 @@
-
 import Post from '@/components/post';
-import filter from 'lodash/filter';
-import { useEffect, useState } from 'react';
-import { FlatList, Text, TextInput, useColorScheme, View } from 'react-native';
-import { ActivityIndicator } from 'react-native-paper';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import React, { useState } from 'react';
+import { FlatList, TextInput, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { db } from '../Firebaseconfig';
 
-interface UserName {
-  title: string;
-  first: string;
-  last: string;
+interface PostData {
+  id: string;
+  author: string;
+  description: string;
+  imageURL: string;
+  item: string;
+  time: any;
+  address: string;
 }
-
-interface User {
-  name: UserName;
-  email: string;
-}
-
-interface ApiResponse {
-  results: User[];
-}
-
-
-const API_ENDPOINT = 'https://randomuser.me/api/?results=20';
-
 
 export default function SearchScreen() {
   const scheme = useColorScheme();
   const textColor = scheme === 'dark' ? '#fff' : '#000';
-  
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [data, setData] = useState<User[]>([]);
-  const [error, setError] = useState<Error | null>(null);
-  const [fullData, setFullData] = useState<User[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [posts, setPosts] = useState<PostData[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-      setIsLoading(true);
-      fetchData(API_ENDPOINT);
-    }, []);
+  const fetchPosts = async (search: string) => {
+    setRefreshing(true);
+    const q = search.trim()
+      ? query(
+        collection(db, 'posts'),
+        where('item', '>=', search),
+        where('item', '<=', search + '\uf8ff'),
+        orderBy('item')
+      )
+      : query(collection(db, 'posts'), orderBy('time', 'desc'));
 
+    const snapshot = await getDocs(q);
+    const fetched = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data() as Omit<PostData, 'id'>
+    }));
+    setPosts(fetched);
+    setRefreshing(false);
+  };
 
-    const fetchData = async (url: string): Promise<void> => {
-      try {
-        const response = await fetch(url);
-        const json: ApiResponse = await response.json();
-        setData(json.results);
-        
-        console.log(json.results);
-
-        setFullData(json.results);
-        setIsLoading(false);
-
-      } catch (error: any) {
-        setError(error);
-        console.log(error);
-        setIsLoading(false);
-      }
-    }
-
-    const handleSearch = (query: string) => {
-        setSearchQuery(query);
-        const formattedQuery = query.toLowerCase();
-        const filteredData =filter(fullData, (user) => {
-          return constains(user, formattedQuery);
-        });
-        setData(filteredData);
-    }
-
-    const constains = ({ name: { first, last } }: User, query: string) => {
-      if (first.toLowerCase().includes(query) || last.toLowerCase().includes(query) || 
-      (first.toLowerCase() + " " + last.toLowerCase()).includes(query))  {
-        return true;
-      }
-      return false;
-
-    };
-
-    if (isLoading) {
-      return (
-        <View>
-          <ActivityIndicator size="large" color="#828282"/>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <View>
-          <Text>Error fetching data</Text>
-        </View>
-      );
-    }
+  React.useEffect(() => {
+    fetchPosts(searchQuery);
+  }, [searchQuery]);
 
   return (
-    <SafeAreaView style = {{ flex: 1, marginHorizontal: 20 }}>
-      <TextInput placeholder = "Search" 
-      clearButtonMode = "always"
-      style = {{ 
-        paddingHorizontal: 10, 
-        paddingVertical: 10, 
-        borderColor: "#ccc", 
-        borderWidth: 1, 
-        borderRadius: 8,
-        color: textColor
-      }}
-      autoCapitalize= "none"
-      autoCorrect = {false}
-      value = {searchQuery}
-      onChangeText = {(query) => handleSearch(query)
-      }
+    <SafeAreaView style={{ flex: 1, marginHorizontal: 20 }}>
+      <TextInput
+        placeholder="Search"
+        clearButtonMode="always"
+        style={{
+          paddingHorizontal: 10,
+          paddingVertical: 10,
+          borderColor: '#ccc',
+          borderWidth: 1,
+          borderRadius: 8,
+          color: textColor
+        }}
+        autoCorrect={false}
+        value={searchQuery}
+        onChangeText={(text) => setSearchQuery(text)}
       />
 
-      <FlatList 
-      data={data}
-      keyExtractor ={(item) => item.name.first + item.name.last}
-      renderItem = {({item}) => (
-        <Post
-          title={item.name.first + " " + item.name.last}
-          subtitle="Posted 1 hour ago"
-          content="I found Pepsi Nitro at Cumnock Hall!!"
-          image='https://pepsimidamerica.com/wp-content/uploads/2022/04/pepsi-mid-america-marion-illinois-nitro-pepsi-draft-cola.jpg'
-        />
-      )}
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id}
+        refreshing={refreshing}
+        onRefresh={() => fetchPosts(searchQuery)}
+        renderItem={({ item }) => (
+          <Post
+            author={item.author}
+            time={item.time?.toDate().toLocaleString() ?? ''}
+            item={item.item}
+            description={item.description}
+            address={item.address}
+            image={item.imageURL}
+          />
+        )}
       />
     </SafeAreaView>
   );

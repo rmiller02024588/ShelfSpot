@@ -9,17 +9,14 @@ General UI/Beautification
         ~ Both a light and Dark Verison
 
 User posts
-    - create databse to store the posts
-    - how to load them dynamically
-    - posts styling
     - post filtering (area, item type)
-    - Search results
-    - Link posts to users
+    - Firebase storage (store images)
 
 Map screen
  - update map screen when databse changes
  - expo location library inegration
  - displaying some sort of icon on the map (probably not images for performance reasons)
+ - turn off the map if there is no location service enabled?
 
 profile screen
  - add real data per users

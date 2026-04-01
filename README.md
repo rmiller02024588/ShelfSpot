@@ -119,3 +119,18 @@ npx expo start
 
 - Now take out your mobile device, and scan the qr code.
 - Once you scan the QR code you will be brought into the app where you can select the different screens to generate the correct screenshots using the bottom nav bar.
+
+## Generating Charts
+### Prerequisites
+```bash
+python -m venv .venv
+```
+```bash
+.venv/Scripts/Activate.ps1
+```
+```bash
+pip install -r requirements.txt
+```
+```bash
+python user_feedback.py
+```

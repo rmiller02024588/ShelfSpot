@@ -122,15 +122,42 @@ npx expo start
 
 ## Generating Charts
 ### Prerequisites
+
+
+- Install python or check if you have it installed, detailed guide click [here](https://realpython.com/installing-python/).
+
+- Clone the repository in your terminal and go the root directory.
+
+```bash
+git clone https://github.com/rmiller02024588/ShelfSpot.git
+cd ShelfSpot
+```
+
+- Change into the feedback_analysis directory.
+
+```bash
+cd feedback_analysis
+```
+- Create a python virtual environment.
+
 ```bash
 python -m venv .venv
 ```
+
+- Activate your virtual envrionment.
+
 ```bash
 .venv/Scripts/Activate.ps1
 ```
+
+- Install the required libraries and dependencies.
+
 ```bash
 pip install -r requirements.txt
 ```
+
+- Run the script to generate the Charts from the document.
+
 ```bash
 python user_feedback.py
 ```

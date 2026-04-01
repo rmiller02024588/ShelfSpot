@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import MapView, { Circle, Marker } from 'react-native-maps';
 
 const defaultAddress: Location.LocationGeocodedAddress = {
@@ -59,7 +59,7 @@ function buildMarkers() {
 
 export default function MapScreen() {
   const [markers] = useState([
-    { lat: 42.653509, lon: -71.326595, title: 'Pepsi Nitro' },
+    { lat: 42.653509, lon: -71.326595, title: 'Cumnock Hall' },
   ]);
   const [location, setLocation] = useState<[number, number]>([defaultLatitude, defaultLongitude]);
 
@@ -93,18 +93,18 @@ export default function MapScreen() {
             fillColor="rgba(0, 0, 255, 0.1)"
         />
         {markers.map((m, i) => (
-          <Marker
-            key={i}
-            coordinate={{ latitude: m.lat, longitude: m.lon }}
-            title={m.title}
-            description="Pepsi Nitro found at Cumnock Hall!"
-          >
-            <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
+            <Marker
+                key={i}
+                coordinate={{ latitude: m.lat, longitude: m.lon }}
+                title={m.title}
+                description="Pepsi Nitro found Here!"
+            >
+           {/*  <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
               <Image
                 source={require('../assets/images/pepsi_nitro.png')}
                 style={{ width: 100, height: 100, borderRadius: 50 }}
               />
-            </View>
+            </View> */}
           </Marker>
         ))}
       </MapView>

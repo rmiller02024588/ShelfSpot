@@ -6,4 +6,8 @@ export const Marker = ({ children }) => (
   <View testID="marker">{children}</View>
 );
 
+export const Circle = ({ children }) => (
+  <View testID="circle">{children}</View>
+);
+
 export default MockMapView; 

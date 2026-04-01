@@ -13,7 +13,9 @@ jest.mock('expo-location', () => ({
   getCurrentPositionAsync: jest.fn().mockResolvedValue({
     coords: { latitude: 42.6500221, longitude: -71.3241605 }
   }),
-  reverseGeocodeAsync: jest.fn().mockResolvedValue([{}])
+  reverseGeocodeAsync: jest.fn().mockResolvedValue([{
+    street: '220 pawtucket st'
+  }])
 }));
 
 describe('MapScreen', () => {
@@ -36,6 +38,6 @@ describe('getUserLocation', () => {
     const [lat, lon, address] = await getUserLocation();
     expect(lat).toBe(42.6500221);
     expect(lon).toBe(-71.3241605);
-    expect(address).toBeDefined();
+    expect(address.street).toBe('220 pawtucket st');
   });
 });

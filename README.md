@@ -76,3 +76,46 @@ ShelfSpot/
 ├── Firebaseconfig.ts # Firebase initialization
 └── .github/          # CI workflows
 ```
+
+
+
+# Figure Generation
+
+## Generating Screenshots
+
+### Prerequisites
+
+**Node.js v18+** — download and install from [nodejs.org](https://nodejs.org/). Select the LTS version.
+
+To verify your Node.js installation, run:
+```bash
+node -v
+```
+You should see `v18.0.0` or higher.
+
+
+To generate screenshots of our application as seen in figures 7.1-7.7 you need to: 
+- Download the Expo Go app on your mobile device.
+- Clone the repository in your terminal, go to the correct direcroy and install all of the correct dependencies.
+
+```bash
+
+git clone https://github.com/rmiller02024588/ShelfSpot.git
+cd ShelfSpot
+npm install
+
+```
+
+
+- Run the command to start the application server.
+
+```bash
+npx expo start
+```
+- From here a qr code will show up
+![Terminal Results](assets/images/image.png "What shows up on the terminal")
+
+---
+
+- Now take out your mobile device, and scan the qr code.
+- Once you scan the QR code you will be brought into the app where you can select the different screens to generate the correct screenshots using the bottom nav bar.

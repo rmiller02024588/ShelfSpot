@@ -1,10 +1,9 @@
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
-import { auth } from '../Firebaseconfig';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '../Firebaseconfig';
 import Post from '../components/post';
+import { auth, db } from '../Firebaseconfig';
 
 const MOCK_SAVES = Array.from({ length: 4 }, (_, i) => ({ id: String(i) }));
 
@@ -47,17 +46,17 @@ export default function ProfileScreen() {
   const data = tab === 'posts' ? posts : MOCK_SAVES;
   const user = auth.currentUser;
 
-  // Query posts by user email, get a snapshot, turn into js objects and catch in an Array, make array available for rendering
-  const fetchPosts = async () => {
-    const q = query(collection(db, 'posts'), where('author', '==', user?.email));
-    const snapshot = await getDocs(q);
-    const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    setPosts(fetched);
-  };
-
   useEffect(() => {
+    // Query posts by user email, get a snapshot, turn into js objects and catch in an Array, make array available for rendering
+    const fetchPosts = async () => {
+      const q = query(collection(db, 'posts'), where('author', '==', user?.email));
+      const snapshot = await getDocs(q);
+      const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPosts(fetched);
+    };
+
     fetchPosts();
-  }, []);
+  }, [user?.email]);
 
   return (
     <FlatList

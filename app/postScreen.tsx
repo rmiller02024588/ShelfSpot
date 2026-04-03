@@ -1,12 +1,13 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
 import * as ImagePicker from 'expo-image-picker';
 import { addDoc, collection, GeoPoint, Timestamp } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MultiSelect } from 'react-native-element-dropdown';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { Appbar, TextInput } from 'react-native-paper';
-import { auth, db } from '../Firebaseconfig';
+import { auth, db, storage } from '../Firebaseconfig';
 
 type PostScreenProps = {
   onBack: () => void;
@@ -56,7 +57,12 @@ export default function PostScreen({ onBack }: PostScreenProps) {
   };
 
   const handlePost = async () => {
-    if (itemValue !== '' && addressValue !== '' && descriptionValue !== '' && selected.length > 0) {
+    if (itemValue !== '' && addressValue !== '' && descriptionValue !== '' && selected.length > 0 && image !== null) {
+      const response = await fetch(image);
+      const blob = await response.blob();
+      const storageRef = ref(storage, `images/${Date.now()}.jpg`);
+      await uploadBytes(storageRef, blob);
+
       await addDoc(collection(db, "posts"), {
         author: auth.currentUser?.email,
         item: itemValue,
@@ -64,7 +70,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
         description: descriptionValue,
         time: Timestamp.fromDate(new Date()),
         type: selected,
-        imageURL: image,
+        imageURL: await getDownloadURL(storageRef),
         coordinates: new GeoPoint(latValue, longValue),
       });
       onBack();

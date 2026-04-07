@@ -20,31 +20,27 @@ export default function AuthGate() {
   const [index, setIndex] = useState(0);
   const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
   const [showPostScreen, setShowPostScreen] = useState(false);
-
+  const [showSettingsScreen, setShowSettingsScreen] = useState(false);
 
   const [routes] = useState([
-    { key: 'home', title: 'Home', focusedIcon: 'home', unfocusedIcon: 'home-outline', testID: 'HomeScreen' },
-    { key: 'search', title: 'Search', focusedIcon: 'magnify', unfocusedIcon: 'magnify', testID: 'SearchScreen' },
-    { key: 'map', title: 'Map', focusedIcon: 'map', unfocusedIcon: 'map-outline', testID: 'MapScreen' },
-    { key: 'profile', title: 'Profile', focusedIcon: 'account-cowboy-hat', unfocusedIcon: 'account-cowboy-hat-outline', testID: 'ProfileScreen' },
-    { key: 'settings', title: 'Settings', focusedIcon: 'cog', unfocusedIcon: 'cog-outline', testID: 'SettingsScreen' },
+    { key: 'home',    title: 'Home',    focusedIcon: 'home',               unfocusedIcon: 'home-outline',                testID: 'HomeScreen' },
+    { key: 'search',  title: 'Search',  focusedIcon: 'magnify',            unfocusedIcon: 'magnify',                     testID: 'SearchScreen' },
+    { key: 'map',     title: 'Map',     focusedIcon: 'map',                unfocusedIcon: 'map-outline',                 testID: 'MapScreen' },
+    { key: 'profile', title: 'Profile', focusedIcon: 'account-cowboy-hat', unfocusedIcon: 'account-cowboy-hat-outline',  testID: 'ProfileScreen' },
   ]);
 
   useEffect(() => {
-
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
     });
-
     return unsubscribe;
-
   }, []);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#FAF7F2' }}>
+        <ActivityIndicator size="large" color="#C0784A" />
       </View>
     );
   }
@@ -59,12 +55,15 @@ export default function AuthGate() {
     return <PostScreen onBack={() => setShowPostScreen(false)} />;
   }
 
+  if (showSettingsScreen) {
+    return <SettingsScreen onBack={() => setShowSettingsScreen(false)} />;
+  }
+
   const renderScene = BottomNavigation.SceneMap({
-    home: () => <HomeScreen onAddPost={() => setShowPostScreen(true)} />,
-    search: () => <SearchScreen />,
-    map: () => <MapScreen />,
-    profile: () => <ProfileScreen />,
-    settings: () => <SettingsScreen />,
+    home:    () => <HomeScreen onAddPost={() => setShowPostScreen(true)} />,
+    search:  () => <SearchScreen />,
+    map:     () => <MapScreen />,
+    profile: () => <ProfileScreen onGoToSettings={() => setShowSettingsScreen(true)} />,
   });
 
   return (
@@ -73,6 +72,13 @@ export default function AuthGate() {
         navigationState={{ index, routes }}
         onIndexChange={setIndex}
         renderScene={renderScene}
+        barStyle={{ backgroundColor: '#FFFFFF' }}
+        theme={{
+          colors: {
+            secondaryContainer: '#F5EDE4',
+            onSecondaryContainer: '#C0784A',
+          }
+        }}
       />
     </PaperProvider>
   );

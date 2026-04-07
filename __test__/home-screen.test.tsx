@@ -1,4 +1,4 @@
-describe('HomeScreen', () => {
+bedescribe('HomeScreen', () => {
   test('placeholder - smoke test passes', () => {
     expect(true).toBe(true);
   });

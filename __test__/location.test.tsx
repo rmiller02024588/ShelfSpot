@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react-native';
 import React from 'react';
-import MapScreen from '../app/mapScreen';
+import MapScreen from '../components/mapScreen.native';
 
 const getUserLocation = require('../app/mapScreen').getUserLocation;
 

@@ -12,13 +12,14 @@ type PostCardProps = {
 };
 
 const COLORS = {
-  background: '#F2F2F2',
-  card: '#FFFFFF',
-  accent: '#1A1A1A',
-  accentLight: '#F0F0F0',
-  text: '#1A1A1A',
-  textSecondary: '#8A8A8A',
-  border: '#E0E0E0',
+  background:    '#FAF7F2',
+  card:          '#FFFFFF',
+  accent:        '#C0784A',
+  accentLight:   '#F5EDE4',
+  text:          '#2C1A0E',
+  textSecondary: '#8C7B6E',
+  border:        '#E8DDD4',
+  inputBg:       '#FDF9F5',
 };
 
 export default function PostCard({ author, item, description, address, image, time }: PostCardProps) {
@@ -60,7 +61,7 @@ export default function PostCard({ author, item, description, address, image, ti
             <AntDesign
               name={'heart'}
               size={18}
-              color={saved ? '#1A1A1A' : COLORS.textSecondary}
+              color={saved ? COLORS.accent : COLORS.textSecondary}
             />
           </TouchableOpacity>
         </View>
@@ -92,9 +93,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#C0784A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.text,
+    color: COLORS.accent,
   },
   authorInfo: {
     flex: 1,

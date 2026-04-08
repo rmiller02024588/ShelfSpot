@@ -7,6 +7,13 @@ jest.mock('../Firebaseconfig', () => ({
   db: {},
 }));
 
+jest.mock('firebase/auth', () => ({
+  onAuthStateChanged: jest.fn((auth, callback) => {
+    callback({ email: 'test@example.com' });
+    return jest.fn();
+  }),
+}));
+
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
   getDocs: jest.fn(() =>
@@ -39,6 +46,15 @@ jest.mock('react-native-paper', () => ({
   },
 }));
 
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  }),
+}));
+
 jest.mock('../components/post', () => {
   const { Text, View } = require('react-native');
   function MockPost({ item, description, author, address }: any) {
@@ -56,12 +72,12 @@ jest.mock('../components/post', () => {
 
 test('renders the user name', () => {
   const { getByText } = render(<ProfileScreen />);
-  expect(getByText('John Doe')).toBeTruthy();
+  expect(getByText('test')).toBeTruthy();
 });
 
 test('renders the avatar initials', () => {
   const { getByText } = render(<ProfileScreen />);
-  expect(getByText('JD')).toBeTruthy();
+  expect(getByText('TE')).toBeTruthy();
 });
 
 test('renders Posts and Saves tabs', () => {

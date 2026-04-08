@@ -77,9 +77,9 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView 
+      <MapView
       style={styles.map}
-      showsUserLocation={true} 
+      showsUserLocation={true}
       region={{
         latitude: location[0],
         longitude: location[1],

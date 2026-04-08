@@ -1,8 +1,9 @@
+import AntDesign from '@expo/vector-icons/AntDesign';
 import Post from '@/components/post';
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { FlatList, TextInput, useColorScheme } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { FlatList, StyleSheet, TextInput, View } from 'react-native';
+import { Appbar } from 'react-native-paper';
 import { db } from '../Firebaseconfig';
 
 interface PostData {
@@ -15,9 +16,18 @@ interface PostData {
   address: string;
 }
 
+const COLORS = {
+  background:    '#FAF7F2',
+  card:          '#FFFFFF',
+  accent:        '#C0784A',
+  accentLight:   '#F5EDE4',
+  text:          '#2C1A0E',
+  textSecondary: '#8C7B6E',
+  border:        '#E8DDD4',
+  inputBg:       '#FDF9F5',
+};
+
 export default function SearchScreen() {
-  const scheme = useColorScheme();
-  const textColor = scheme === 'dark' ? '#fff' : '#000';
   const [searchQuery, setSearchQuery] = useState('');
   const [posts, setPosts] = useState<PostData[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,11 +36,11 @@ export default function SearchScreen() {
     setRefreshing(true);
     const q = search.trim()
       ? query(
-        collection(db, 'posts'),
-        where('item', '>=', search),
-        where('item', '<=', search + '\uf8ff'),
-        orderBy('item')
-      )
+          collection(db, 'posts'),
+          where('item', '>=', search),
+          where('item', '<=', search + '\uf8ff'),
+          orderBy('item')
+        )
       : query(collection(db, 'posts'), orderBy('time', 'desc'));
 
     const snapshot = await getDocs(q);
@@ -47,22 +57,25 @@ export default function SearchScreen() {
   }, [searchQuery]);
 
   return (
-    <SafeAreaView style={{ flex: 1, marginHorizontal: 20 }}>
-      <TextInput
-        placeholder="Search"
-        clearButtonMode="always"
-        style={{
-          paddingHorizontal: 10,
-          paddingVertical: 10,
-          borderColor: '#ccc',
-          borderWidth: 1,
-          borderRadius: 8,
-          color: textColor
-        }}
-        autoCorrect={false}
-        value={searchQuery}
-        onChangeText={(text) => setSearchQuery(text)}
-      />
+    <View style={styles.root}>
+      <Appbar.Header style={styles.header} elevated={false}>
+        <Appbar.Content title="Search" titleStyle={styles.headerTitle} />
+      </Appbar.Header>
+
+      <View style={styles.searchRow}>
+        <View style={styles.searchInputWrapper}>
+          <AntDesign name="search" size={16} color={COLORS.textSecondary} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search for a snack or drink..."
+            placeholderTextColor={COLORS.textSecondary}
+            clearButtonMode="always"
+            autoCorrect={false}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
 
       <FlatList
         data={posts}
@@ -80,6 +93,48 @@ export default function SearchScreen() {
           />
         )}
       />
-    </SafeAreaView>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.background,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    elevation: 0,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  searchRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: COLORS.background,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.inputBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    height: 44,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: COLORS.text,
+  },
+});

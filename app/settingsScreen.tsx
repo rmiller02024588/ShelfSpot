@@ -1,8 +1,19 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Avatar } from 'react-native-paper';
+import { Appbar, Avatar } from 'react-native-paper';
 
-export default function SettingsScreen() {
+const COLORS = {
+  background:    '#FAF7F2',
+  card:          '#FFFFFF',
+  accent:        '#C0784A',
+  accentLight:   '#F5EDE4',
+  text:          '#2C1A0E',
+  textSecondary: '#8C7B6E',
+  border:        '#E8DDD4',
+  inputBg:       '#FDF9F5',
+};
+
+export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
   const [profile, setProfile] = useState({ name: 'John Doe', email: 'johndoe@example.com', password: 'secret123', username: 'johndoe' });
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState('');
@@ -41,29 +52,111 @@ export default function SettingsScreen() {
   );
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.avatarWrapper}>
-        <Avatar.Text size={90} label="JD" style={{ backgroundColor: '#4a90d9' }} color="#fff" />
-        <Text style={styles.name}>{profile.name}</Text>
-      </View>
-      {renderField('Email', 'email')}
-      {renderField('Password', 'password')}
-      {renderField('Username', 'username')}
-    </ScrollView>
+    <View style={styles.root}>
+      <Appbar.Header style={styles.header} elevated={false}>
+        <Appbar.BackAction onPress={onBack} iconColor={COLORS.text} />
+        <Appbar.Content title="Settings" titleStyle={styles.headerTitle} />
+      </Appbar.Header>
+
+      <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.avatarWrapper}>
+          <Avatar.Text size={90} label="JD" style={{ backgroundColor: COLORS.accent }} color="#fff" />
+          <Text style={styles.name}>{profile.name}</Text>
+        </View>
+        {renderField('Email', 'email')}
+        {renderField('Password', 'password')}
+        {renderField('Username', 'username')}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20, backgroundColor: '#1a1a1f', flexGrow: 1 },
-  avatarWrapper: { alignItems: 'center', marginVertical: 30 },
-  name: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginTop: 10 },
-  field: { backgroundColor: '#fff', borderRadius: 10, padding: 14, marginBottom: 12 },
-  label: { color: '#888', fontSize: 12, marginBottom: 4 },
-  value: { color: '#1a1a1f', fontSize: 16 },
-  input: { borderWidth: 1, borderColor: '#4a90d9', borderRadius: 6, padding: 10, fontSize: 16, marginBottom: 10 },
-  row: { flexDirection: 'row', gap: 10 },
-  saveBtn: { flex: 1, backgroundColor: '#4a90d9', borderRadius: 6, padding: 10, alignItems: 'center' },
-  saveTxt: { color: '#fff', fontWeight: 'bold' },
-  cancelBtn: { flex: 1, backgroundColor: '#ccc', borderRadius: 6, padding: 10, alignItems: 'center' },
-  cancelTxt: { color: '#333' },
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.background,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    elevation: 0,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  container: {
+    padding: 20,
+    backgroundColor: COLORS.background,
+    flexGrow: 1,
+  },
+  avatarWrapper: {
+    alignItems: 'center',
+    marginVertical: 30,
+  },
+  name: {
+    color: COLORS.text,
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginTop: 10,
+  },
+  field: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    marginBottom: 12,
+    shadowColor: '#C0784A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  label: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  value: {
+    color: COLORS.text,
+    fontSize: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    marginBottom: 10,
+    color: COLORS.text,
+    backgroundColor: COLORS.inputBg,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  saveBtn: {
+    flex: 1,
+    backgroundColor: COLORS.accent,
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
+  },
+  saveTxt: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: COLORS.accentLight,
+    borderRadius: 8,
+    padding: 10,
+    alignItems: 'center',
+  },
+  cancelTxt: {
+    color: COLORS.text,
+  },
 });

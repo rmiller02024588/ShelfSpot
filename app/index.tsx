@@ -27,14 +27,14 @@ const CATEGORIES = [
 ];
 
 const COLORS = {
-  background: '#F2F2F2',
-  card: '#FFFFFF',
-  accent: '#1A1A1A',
-  accentLight: '#F0F0F0',
-  text: '#1A1A1A',
-  textSecondary: '#8A8A8A',
-  border: '#E0E0E0',
-  inputBg: '#FAFAFA',
+  background:    '#FAF7F2',
+  card:          '#FFFFFF',
+  accent:        '#C0784A',
+  accentLight:   '#F5EDE4',
+  text:          '#2C1A0E',
+  textSecondary: '#8C7B6E',
+  border:        '#E8DDD4',
+  inputBg:       '#FDF9F5',
 };
 
 export default function HomeScreen({ onAddPost }: HomeScreenProps) {
@@ -80,6 +80,7 @@ export default function HomeScreen({ onAddPost }: HomeScreenProps) {
           testID="add-post-button"
           icon="plus-circle-outline"
           onPress={onAddPost}
+          iconColor={COLORS.accent}
         />
       </Appbar.Header>
 
@@ -144,9 +145,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     color: COLORS.text,
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   filterBar: {
     flexDirection: 'row',
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderColor: COLORS.border,
     marginTop: 4,
-    shadowColor: '#000',
+    shadowColor: '#C0784A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 10,

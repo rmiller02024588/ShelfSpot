@@ -1,5 +1,8 @@
+import { db } from '@/Firebaseconfig';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import React, { useState } from 'react';
+import { getAuth } from 'firebase/auth';
+import { deleteDoc, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type PostCardProps = {
@@ -9,6 +12,7 @@ type PostCardProps = {
   address: string;
   image: string;
   time: string;
+  postId: string;
 };
 
 const COLORS = {
@@ -22,8 +26,44 @@ const COLORS = {
   inputBg:       '#FDF9F5',
 };
 
-export default function PostCard({ author, item, description, address, image, time }: PostCardProps) {
+export default function PostCard({ author, item, description, address, image, time, postId }: PostCardProps) {
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+  const user = getAuth().currentUser;
+  if (!user) return;
+
+  const ref = doc(db, 'users', user.uid, 'savedPosts', postId);
+
+  const unsubscribe = onSnapshot(ref, (docSnap) => {
+    setSaved(docSnap.exists());
+  });
+
+  return unsubscribe;
+}, [postId, getAuth().currentUser?.uid]);
+
+  const handleSavePress = async () => {
+      const user = getAuth().currentUser;
+      if (!user) return;
+    const newSavedState = !saved;
+    setSaved(newSavedState);
+    try {
+      if (newSavedState) {
+        await savePost(postId);
+      } else {
+        await unsavePost(postId);
+      }
+
+       const docSnap = await getDoc(
+      doc(db, 'users', user.uid, 'savedPosts', postId)
+    );
+    setSaved(docSnap.exists());
+
+    } catch (err) {
+      setSaved(!newSavedState);
+      console.error('Error saving/unsaving post:', err);
+    }
+  };
 
   const initials = author
     .split(' ')
@@ -54,7 +94,7 @@ export default function PostCard({ author, item, description, address, image, ti
             <Text style={styles.timeText}>{time}</Text>
           </View>
           <TouchableOpacity
-            onPress={() => setSaved(s => !s)}
+            onPress={handleSavePress}
             style={styles.saveButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
@@ -85,6 +125,25 @@ export default function PostCard({ author, item, description, address, image, ti
     </View>
   );
 }
+
+
+const savePost = async (postId: string) => {
+  const user = getAuth().currentUser;
+  if (!user) return;
+
+  await setDoc(
+    doc(db, "users", user.uid, "savedPosts", postId),
+    {
+    }
+  );
+};
+
+const unsavePost = async (postId: string) => {
+  const user = getAuth().currentUser;
+  if (!user) return;
+
+  await deleteDoc(doc(db, "users", user.uid, "savedPosts", postId));
+};
 
 const styles = StyleSheet.create({
   card: {

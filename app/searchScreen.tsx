@@ -1,5 +1,5 @@
-import AntDesign from '@expo/vector-icons/AntDesign';
 import Post from '@/components/post';
+import AntDesign from '@expo/vector-icons/AntDesign';
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, TextInput, View } from 'react-native';
@@ -90,6 +90,7 @@ export default function SearchScreen() {
             description={item.description}
             address={item.address}
             image={item.imageURL}
+            postId={item.id}
           />
         )}
       />

@@ -125,6 +125,7 @@ export default function HomeScreen({ onAddPost }: HomeScreenProps) {
             description={item.description}
             address={item.address}
             image={item.imageURL}
+            postId={item.id}
           />
         )}
       />

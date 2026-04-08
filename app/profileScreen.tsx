@@ -1,5 +1,5 @@
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
@@ -71,8 +71,8 @@ export default function ProfileScreen({ onGoToSettings }: ProfileScreenProps) {
   const [tab, setTab] = useState<'posts' | 'saves'>('posts');
   const [posts, setPosts] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
-  const data = tab === 'posts' ? posts : MOCK_SAVES;
-
+  const [savedPosts, setSavedPosts] = useState<any[]>([]);
+  const data = tab === 'posts' ? posts : savedPosts;
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
     return unsubscribe;
@@ -88,6 +88,26 @@ export default function ProfileScreen({ onGoToSettings }: ProfileScreenProps) {
     };
     fetchPosts();
   }, [currentUser?.email]);
+
+
+  useEffect(() => {
+  if (!currentUser?.uid) return;
+
+  const q = collection(db, 'users', currentUser.uid, 'savedPosts');
+
+  const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const fetched = await Promise.all(
+      snapshot.docs.map(async (savedDoc) => {
+        const postDoc = await getDoc(doc(db, 'posts', savedDoc.id));
+        return { id: postDoc.id, ...postDoc.data() };
+      })
+    );
+
+    setSavedPosts(fetched);
+  });
+
+  return unsubscribe; // cleanup listener
+}, [currentUser?.uid]);
 
   const username = currentUser?.email
     ? currentUser.email.split('@')[0]
@@ -121,9 +141,18 @@ export default function ProfileScreen({ onGoToSettings }: ProfileScreenProps) {
             description={item.description}
             address={item.address}
             image={item.imageURL}
+            postId={item.id}
           />
         ) : (
-          <View style={styles.postTile} />
+          <Post
+            author={item.author ?? 'Unknown'}
+            time={item.time?.toDate().toLocaleString() ?? ''}
+            item={item.item}
+            description={item.description}
+            address={item.address}
+            image={item.imageURL}
+            postId={item.id}
+          />
         )
       )}
     />

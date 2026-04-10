@@ -1,5 +1,5 @@
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
@@ -78,36 +78,39 @@ export default function ProfileScreen({ onGoToSettings }: ProfileScreenProps) {
     return unsubscribe;
   }, []);
 
+  // Fetch user's own posts from ownPosts subcollection
   useEffect(() => {
-    if (!currentUser?.email) return;
-    const fetchPosts = async () => {
-      const q = query(collection(db, 'posts'), where('author', '==', currentUser.email));
-      const snapshot = await getDocs(q);
+    if (!currentUser?.uid) return;
+
+    const q = collection(db, 'users', currentUser.uid, 'ownPosts');
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPosts(fetched);
-    };
-    fetchPosts();
-  }, [currentUser?.email]);
+    });
 
+    return unsubscribe;
+  }, [currentUser?.uid]);
 
+  // Fetch user's saved posts
   useEffect(() => {
-  if (!currentUser?.uid) return;
+    if (!currentUser?.uid) return;
 
-  const q = collection(db, 'users', currentUser.uid, 'savedPosts');
+    const q = collection(db, 'users', currentUser.uid, 'savedPosts');
 
-  const unsubscribe = onSnapshot(q, async (snapshot) => {
-    const fetched = await Promise.all(
-      snapshot.docs.map(async (savedDoc) => {
-        const postDoc = await getDoc(doc(db, 'posts', savedDoc.id));
-        return { id: postDoc.id, ...postDoc.data() };
-      })
-    );
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const fetched = await Promise.all(
+        snapshot.docs.map(async (savedDoc) => {
+          const postDoc = await getDoc(doc(db, 'posts', savedDoc.id));
+          return { id: postDoc.id, ...postDoc.data() };
+        })
+      );
 
-    setSavedPosts(fetched);
-  });
+      setSavedPosts(fetched);
+    });
 
-  return unsubscribe; // cleanup listener
-}, [currentUser?.uid]);
+    return unsubscribe;
+  }, [currentUser?.uid]);
 
   const username = currentUser?.email
     ? currentUser.email.split('@')[0]

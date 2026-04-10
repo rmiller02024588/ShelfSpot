@@ -63,7 +63,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
       const storageRef = ref(storage, `images/${Date.now()}.jpg`);
       await uploadBytes(storageRef, blob);
 
-      await addDoc(collection(db, "posts"), {
+      const postData = {
         author: auth.currentUser?.email,
         item: itemValue,
         address: addressValue,
@@ -72,7 +72,16 @@ export default function PostScreen({ onBack }: PostScreenProps) {
         type: selected,
         imageURL: await getDownloadURL(storageRef),
         coordinates: new GeoPoint(latValue, longValue),
-      });
+      };
+
+      // Add to main posts collection
+      await addDoc(collection(db, "posts"), postData);
+
+      // Add to user's ownPosts subcollection
+      if (auth.currentUser?.uid) {
+        await addDoc(collection(db, "users", auth.currentUser.uid, "ownPosts"), postData);
+      }
+
       onBack();
     }
     else {

@@ -10,7 +10,6 @@ General UI/Beautification
 
 User posts
     - post filtering (area, item type)
-    - Firebase storage (store images)
 
 Map screen
  - update map screen when databse changes
@@ -19,8 +18,11 @@ Map screen
  - turn off the map if there is no location service enabled?
 
 profile screen
- - add real data per users
- - add a databse for users that include posts and followers and such
+ - None
+
+ Search
+ - Redesigned post component with view more drop down
+ - No post image or username. Only item, location, and time.
 
 seetings screen/auth implementation:
  - forgot password button

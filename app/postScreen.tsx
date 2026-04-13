@@ -19,14 +19,14 @@ const CATEGORIES = [
 ];
 
 const COLORS = {
-  background: '#F2F2F2',
-  card: '#FFFFFF',
-  accent: '#1A1A1A',
-  accentLight: '#F0F0F0',
-  text: '#1A1A1A',
-  textSecondary: '#8A8A8A',
-  border: '#E0E0E0',
-  inputBg: '#FAFAFA',
+    background: '#FAF7F2',
+    card: '#FFFFFF',
+    accent: '#C0784A',
+    accentLight: '#F5EDE4',
+    text: '#2C1A0E',
+    textSecondary: '#8C7B6E',
+    border: '#E8DDD4',
+    inputBg: '#FDF9F5',
 };
 
 export default function PostScreen({ onBack }: PostScreenProps) {

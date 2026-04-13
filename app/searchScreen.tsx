@@ -1,4 +1,4 @@
-import Post from '@/components/post';
+import MinPostCard from '@/components/minPost';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useState } from 'react';
@@ -83,7 +83,7 @@ export default function SearchScreen() {
         refreshing={refreshing}
         onRefresh={() => fetchPosts(searchQuery)}
         renderItem={({ item }) => (
-          <Post
+          <MinPostCard
             author={item.author}
             time={item.time?.toDate().toLocaleString() ?? ''}
             item={item.item}

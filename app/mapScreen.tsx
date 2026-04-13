@@ -1,7 +1,13 @@
 import * as Location from 'expo-location';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Circle, Marker } from 'react-native-maps';
+import MapView from 'react-native-map-clustering';
+import { Circle, Marker } from 'react-native-maps';
+import StoreMarker from '../components/storeMarker';
+import { auth, db } from '../Firebaseconfig';
+
 
 const defaultAddress: Location.LocationGeocodedAddress = {
     street: '220 pawtucket st',
@@ -53,27 +59,81 @@ function getPostinRange() {
 }
 
 function buildMarkers() {
+
 }
 
 
 
 export default function MapScreen() {
-  const [markers] = useState([
-    { lat: 42.653509, lon: -71.326595, title: 'Cumnock Hall' },
-  ]);
-  const [location, setLocation] = useState<[number, number]>([defaultLatitude, defaultLongitude]);
+    const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+    const [posts, setPosts] = useState<any[]>([]);
 
-  useEffect(() => {
-    const fetchLocation = async () => {
-      const [lat, lon] = await getUserLocation();
-      if (lat === null || lon === null) {
-        setLocation([defaultLatitude, defaultLongitude]);
-      } else {
-        setLocation([lat, lon]);
-      }
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+        return unsubscribe;
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, 'posts'), (snapshot) => {
+            const fetched = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+        setPosts(fetched);
+        });
+    return unsubscribe; 
+    }  , []);
+
+    /* useEffect(() => {
+    if (!currentUser?.email) return;
+    const fetchPosts = async () => {
+      const q = query(collection(db, 'posts'), where('author', '==', currentUser.email));
+      const snapshot = await getDocs(q);
+      const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPosts(fetched);
     };
-    fetchLocation();
-  }, []);
+    fetchPosts();
+
+
+  }, [currentUser?.email]);
+
+useEffect(() => {
+  if (!currentUser?.uid) return;
+
+  const q = collection(db, 'users', currentUser.uid, 'posts');
+
+  const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const fetched = await Promise.all(
+      snapshot.docs.map(async (savedDoc) => {
+        const postDoc = await getDoc(doc(db, 'posts', savedDoc.id));
+        return { id: postDoc.id, ...postDoc.data() };
+      })
+    );
+
+    setPosts(fetched);
+  });
+
+  return unsubscribe; // cleanup listener
+}, [currentUser?.uid]); */
+    
+
+    /* const [markers] = useState([
+        { lat: 42.653509, lon: -71.326595, title: 'Cumnock Hall' },
+    ]); */
+
+    const [location, setLocation] = useState<[number, number]>([defaultLatitude, defaultLongitude]);
+
+    useEffect(() => {
+        const fetchLocation = async () => {
+            const [lat, lon] = await getUserLocation();
+                if (lat === null || lon === null) {
+                     setLocation([defaultLatitude, defaultLongitude]);
+                } else {
+                    setLocation([lat, lon]);
+                }
+        };
+        fetchLocation();
+    }, []);
 
   return (
     <View style={styles.container}>
@@ -92,19 +152,17 @@ export default function MapScreen() {
             strokeColor="rgba(0, 0, 255, 0.5)"
             fillColor="rgba(0, 0, 255, 0.1)"
         />
-        {markers.map((m, i) => (
+        {posts.map((m) => (
             <Marker
-                key={i}
-                coordinate={{ latitude: m.lat, longitude: m.lon }}
-                title={m.title}
-                description="Pepsi Nitro found Here!"
+                key={m.id}
+                coordinate={{
+                    latitude: m.coordinates.latitude,
+                    longitude: m.coordinates.longitude
+                }}
+                title={m.item}
+                description={m.description}
             >
-           {/*  <View style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
-              <Image
-                source={require('../assets/images/pepsi_nitro.png')}
-                style={{ width: 100, height: 100, borderRadius: 50 }}
-              />
-            </View> */}
+                <StoreMarker />
           </Marker>
         ))}
       </MapView>

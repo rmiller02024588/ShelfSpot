@@ -1,5 +1,37 @@
 import { render } from '@testing-library/react-native';
 import React from 'react';
+
+
+jest.mock('../Firebaseconfig', () => ({
+  auth: { currentUser: { uid: 'test-uid', email: 'test@example.com' } },
+  db: {},
+}));
+
+jest.mock('firebase/auth', () => ({
+  getReactNativePersistence: jest.fn(),
+  initializeAuth: jest.fn(),
+  onAuthStateChanged: jest.fn(),
+  getAuth: jest.fn(() => ({
+    currentUser: { uid: 'test-uid', email: 'test@example.com' },
+  })),
+}));
+
+jest.mock('firebase/app', () => ({
+  initializeApp: jest.fn(),
+}));
+
+jest.mock('firebase/firestore', () => ({
+  getFirestore: jest.fn(),
+  collection: jest.fn(),
+  doc: jest.fn(),
+  getDoc: jest.fn(),
+  onSnapshot: jest.fn(() => jest.fn()),
+}));
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  default: {},
+}));
+
 import Post from '../components/post';
 
 test('renders post with title and content', () => {

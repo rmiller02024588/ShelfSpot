@@ -3,39 +3,52 @@ import React from 'react';
 import ProfileScreen from '../app/profileScreen';
 
 jest.mock('../Firebaseconfig', () => ({
-  auth: { currentUser: { email: 'test@example.com' } },
+  auth: { currentUser: { uid: 'test-uid', email: 'test@example.com', displayName: 'test' } },
   db: {},
 }));
 
 jest.mock('firebase/auth', () => ({
   onAuthStateChanged: jest.fn((auth, callback) => {
-    callback({ email: 'test@example.com' });
+    callback({ uid: 'test-uid', email: 'test@example.com', displayName: 'test' });
     return jest.fn();
   }),
 }));
 
-jest.mock('firebase/firestore', () => ({
-  collection: jest.fn(),
-  getDocs: jest.fn(() =>
-    Promise.resolve({
-      docs: [
-        {
-          id: '1',
-          data: () => ({
-            author: 'test@example.com',
-            item: 'Pepsi',
-            description: 'Two left',
-            address: '123 Main St',
-            imageURL: '',
-            time: { toDate: () => new Date('2026-01-01') },
-          }),
-        },
-      ],
-    })
-  ),
-  query: jest.fn(),
-  where: jest.fn(),
-}));
+jest.mock('firebase/firestore', () => {
+  const mockOwnPost = {
+    id: '1',
+    data: () => ({
+      author: 'test@example.com',
+      item: 'Pepsi',
+      description: 'Two left',
+      address: '123 Main St',
+      imageURL: '',
+      time: { toDate: () => new Date('2026-01-01') },
+    }),
+  };
+
+  const mockSavedPost = {
+    id: 'saved-1',
+    data: () => ({
+      author: 'test@example.com',
+      item: 'Saved Item',
+      description: 'Saved description',
+      address: '456 Save St',
+      imageURL: '',
+      time: { toDate: () => new Date('2026-01-01') },
+    }),
+  };
+
+  return {
+    collection: jest.fn(() => 'mock-collection'),
+    doc: jest.fn(() => 'mock-doc-ref'),
+    getDoc: jest.fn(() => Promise.resolve(mockSavedPost)),
+    onSnapshot: jest.fn((query, callback) => {
+      callback({ docs: [mockOwnPost] });
+      return jest.fn(); // unsubscribe
+    }),
+  };
+});
 
 jest.mock('react-native-paper', () => ({
   Avatar: {
@@ -47,12 +60,7 @@ jest.mock('react-native-paper', () => ({
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
-  useSafeAreaInsets: () => ({
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  }),
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
 jest.mock('../components/post', () => {
@@ -95,7 +103,7 @@ test('renders post data after fetch', async () => {
   });
 });
 
-test('switches to Saves tab when pressed', async () => {
+test('switches to Saves tab and hides posts', async () => {
   const { getByText, queryByText } = render(<ProfileScreen />);
   await waitFor(() => expect(getByText('Pepsi')).toBeTruthy());
   fireEvent.press(getByText('Saves'));

@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { auth } from "../Firebaseconfig";
@@ -17,6 +17,7 @@ const COLORS = {
 export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void }) {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [displayName, setDisplayName] = useState<string>("");
 
   const makeAccount = async () => {
     try {
@@ -24,6 +25,19 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
     } catch (error) {
       console.log(error);
     }
+
+    const user = auth.currentUser;
+    if (user && displayName.trim() !== '') {
+    try {
+      await updateProfile(user, { displayName });
+      console.log('Profile updated with display name:', displayName);
+    } catch (profileError) {
+      console.log('Error updating profile:', profileError);
+    }
+  }
+
+
+
   };
 
   return (
@@ -57,6 +71,18 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
               secureTextEntry
               value={password}
               onChangeText={setPassword}
+            />
+          </View>
+
+
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="Display Name"
+              placeholderTextColor={COLORS.textSecondary}
+              
+              value={displayName}
+              onChangeText={setDisplayName}
             />
           </View>
 

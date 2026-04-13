@@ -67,12 +67,14 @@ export default function PostCard({ author, item, description, address, image, ti
     }
   };
 
-  const initials = (author ?? '')
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = author
+  ? author
+      .split(' ')
+      .map(w => w[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  : 'U';
 
   return (
     <View style={styles.card}>

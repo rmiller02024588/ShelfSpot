@@ -1,6 +1,10 @@
-import { render } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import SettingsScreen from '../app/settingsScreen';
+
+jest.mock('../Firebaseconfig', () => ({
+  auth: {},
+}));
 
 jest.mock('react-native-paper', () => ({
   Avatar: {
@@ -22,7 +26,11 @@ jest.mock('react-native-paper', () => ({
   },
 }));
 
-test('renders settings page successfully', () => {
+test('renders the logged-in user name default (User)', async () => {
   const { getByText } = render(<SettingsScreen />);
-  expect(getByText('John Doe')).toBeTruthy();
+
+  // Wait because onAuthStateChanged triggers a state update
+  await waitFor(() => {
+    expect(getByText('User')).toBeTruthy();
+  });
 });

@@ -63,8 +63,10 @@ export default function PostScreen({ onBack }: PostScreenProps) {
       const storageRef = ref(storage, `images/${Date.now()}.jpg`);
       await uploadBytes(storageRef, blob);
 
+      const user = auth.currentUser;
+
       const postData = {
-        author: auth.currentUser?.email,
+        author: user?.displayName || user?.email || "Unknown",
         item: itemValue,
         address: addressValue,
         description: descriptionValue,

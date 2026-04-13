@@ -1,6 +1,9 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { onAuthStateChanged, signOut, updateProfile, User } from 'firebase/auth';
+import { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Appbar, Avatar } from 'react-native-paper';
+import { auth } from '../Firebaseconfig';
+
 
 const COLORS = {
   background:    '#FAF7F2',
@@ -14,12 +17,47 @@ const COLORS = {
 };
 
 export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
-  const [profile, setProfile] = useState({ name: 'John Doe', email: 'johndoe@example.com', password: 'secret123', username: 'johndoe' });
+  const [profile, setProfile] = useState({ name: '', email: '' });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [tempValue, setTempValue] = useState('');
 
+  // Load current user's auth data
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (user) {
+        setProfile({
+          name: user.displayName || '',
+          email: user.email || '',
+        });
+      }
+    });
+    return unsubscribe;
+  }, []);
+
   const startEdit = (field: string) => { setEditingField(field); setTempValue(profile[field as keyof typeof profile]); };
-  const save = () => { setProfile({ ...profile, [editingField!]: tempValue }); setEditingField(null); };
+  
+  const save = async () => {
+    if (!currentUser) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
+    try {
+      if (editingField === 'name') {
+        await updateProfile(currentUser, { displayName: tempValue });
+      }
+      
+      setProfile({ ...profile, [editingField!]: tempValue });
+      Alert.alert('Success', 'Profile updated successfully');
+      setEditingField(null);
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', 'Failed to save profile changes');
+    }
+  };
+  
   const cancel = () => setEditingField(null);
 
   const renderField = (label: string, field: string) => (
@@ -31,8 +69,9 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
             style={styles.input}
             value={tempValue}
             onChangeText={setTempValue}
-            secureTextEntry={field === 'password'}
-            autoFocus autoCapitalize="none" autoCorrect={false}
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <View style={styles.row}>
             <TouchableOpacity style={styles.saveBtn} onPress={save}>
@@ -45,7 +84,7 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
         </>
       ) : (
         <TouchableOpacity onPress={() => startEdit(field)}>
-          <Text style={styles.value}>{field === 'password' ? '••••••••' : profile[field as keyof typeof profile]}</Text>
+          <Text style={styles.value}>{profile[field as keyof typeof profile]}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -60,16 +99,37 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
 
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.avatarWrapper}>
-          <Avatar.Text size={90} label="JD" style={{ backgroundColor: COLORS.accent }} color="#fff" />
-          <Text style={styles.name}>{profile.name}</Text>
+          <Avatar.Text 
+            size={90} 
+            label={profile.name ? profile.name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() : 'U'} 
+            style={{ backgroundColor: COLORS.accent }} 
+            color="#fff" 
+          />
+          <Text style={styles.name}>{profile.name || 'User'}</Text>
         </View>
+        {renderField('Name', 'name')}
         {renderField('Email', 'email')}
-        {renderField('Password', 'password')}
         {renderField('Username', 'username')}
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutTxt}>Log Out</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
+
+
+const handleLogout = async () => {
+  try {
+    await signOut(auth);
+    Alert.alert('Logged out', 'You have been logged out successfully');
+    
+    
+  } catch (error) {
+    console.error('Logout error:', error);
+    Alert.alert('Error', 'Failed to log out');
+  }
+};
 
 const styles = StyleSheet.create({
   root: {
@@ -159,4 +219,17 @@ const styles = StyleSheet.create({
   cancelTxt: {
     color: COLORS.text,
   },
+  logoutBtn: {
+  marginTop: 20,
+  backgroundColor: '#E74C3C',
+  borderRadius: 10,
+  padding: 14,
+  alignItems: 'center',
+},
+
+logoutTxt: {
+  color: '#fff',
+  fontWeight: 'bold',
+  fontSize: 16,
+},
 });

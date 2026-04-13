@@ -112,9 +112,9 @@ export default function ProfileScreen({ onGoToSettings }: ProfileScreenProps) {
     return unsubscribe;
   }, [currentUser?.uid]);
 
-  const username = currentUser?.email
-    ? currentUser.email.split('@')[0]
-    : 'Unknown';
+  const username = currentUser?.displayName
+  || currentUser?.email?.split('@')[0]
+  || 'Unknown';
   const initials = username.slice(0, 2).toUpperCase();
   const insets = useSafeAreaInsets();
 

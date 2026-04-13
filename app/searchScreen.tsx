@@ -1,4 +1,4 @@
-import Post from '@/components/post';
+import MinPostCard from '@/components/minPost';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useState } from 'react';
@@ -34,7 +34,7 @@ export default function SearchScreen() {
 
   const fetchPosts = async (search: string) => {
     setRefreshing(true);
-    const q = search.trim()
+    const q1 = search.trim()
       ? query(
           collection(db, 'posts'),
           where('item', '>=', search),
@@ -43,12 +43,27 @@ export default function SearchScreen() {
         )
       : query(collection(db, 'posts'), orderBy('time', 'desc'));
 
-    const snapshot = await getDocs(q);
-    const fetched = snapshot.docs.map(doc => ({
+    const q2 = search.trim()
+      ? query(
+          collection(db, 'posts'),
+          where('author', '>=', search),
+          where('author', '<=', search + '\uf8ff'),
+          orderBy('author')
+        )
+      : query(collection(db, 'posts'), orderBy('time', 'desc'));
+
+    const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    const fetched1 = snapshot1.docs.map(doc => ({
       id: doc.id,
       ...doc.data() as Omit<PostData, 'id'>
     }));
-    setPosts(fetched);
+    const fetched2 = snapshot2.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data() as Omit<PostData, 'id'>
+    }));
+    const combined = [...fetched1, ...fetched2];
+    const unique = combined.filter((post, index, self) => self.findIndex(p => p.id === post.id) === index);
+    setPosts(unique);
     setRefreshing(false);
   };
 
@@ -83,7 +98,7 @@ export default function SearchScreen() {
         refreshing={refreshing}
         onRefresh={() => fetchPosts(searchQuery)}
         renderItem={({ item }) => (
-          <Post
+          <MinPostCard
             author={item.author}
             time={item.time?.toDate().toLocaleString() ?? ''}
             item={item.item}

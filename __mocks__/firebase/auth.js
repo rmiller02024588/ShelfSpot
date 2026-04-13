@@ -7,4 +7,6 @@ module.exports = {
   signInWithEmailAndPassword: jest.fn(),
   signOut: jest.fn(),
   createUserWithEmailAndPassword: jest.fn(),
+  getReactNativePersistence: jest.fn(() => jest.fn()),
+  initializeAuth: jest.fn(() => ({})),
 };

@@ -11,6 +11,8 @@ import ProfileScreen from "../app/profileScreen";
 import SearchScreen from "../app/searchScreen";
 import SettingsScreen from "../app/settingsScreen";
 import SignUpScreen from './../app/signUpScreen';
+import ViewUserProfileScreen from "../app/viewUserProfileScreen";
+import { ProfileNavContext } from "../context/ProfileNavContext";
 
 
 export default function AuthGate() {
@@ -21,6 +23,7 @@ export default function AuthGate() {
   const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
   const [showPostScreen, setShowPostScreen] = useState(false);
   const [showSettingsScreen, setShowSettingsScreen] = useState(false);
+  const [viewingUserEmail, setViewingUserEmail] = useState<string | null>(null);
 
   const [routes] = useState([
     { key: 'home',    title: 'Home',    focusedIcon: 'home',               unfocusedIcon: 'home-outline',                testID: 'HomeScreen' },
@@ -59,6 +62,10 @@ export default function AuthGate() {
     return <SettingsScreen onBack={() => setShowSettingsScreen(false)} />;
   }
 
+  if (viewingUserEmail) {
+    return <ViewUserProfileScreen userEmail={viewingUserEmail} onBack={() => setViewingUserEmail(null)} />;
+  }
+
   const renderScene = BottomNavigation.SceneMap({
     home:    () => <HomeScreen onAddPost={() => setShowPostScreen(true)} />,
     search:  () => <SearchScreen />,
@@ -67,19 +74,21 @@ export default function AuthGate() {
   });
 
   return (
-    <PaperProvider>
-      <BottomNavigation
-        navigationState={{ index, routes }}
-        onIndexChange={setIndex}
-        renderScene={renderScene}
-        barStyle={{ backgroundColor: '#FFFFFF' }}
-        theme={{
-          colors: {
-            secondaryContainer: '#F5EDE4',
-            onSecondaryContainer: '#C0784A',
-          }
-        }}
-      />
-    </PaperProvider>
+    <ProfileNavContext.Provider value={{ onViewProfile: setViewingUserEmail }}>
+      <PaperProvider>
+        <BottomNavigation
+          navigationState={{ index, routes }}
+          onIndexChange={setIndex}
+          renderScene={renderScene}
+          barStyle={{ backgroundColor: '#FFFFFF' }}
+          theme={{
+            colors: {
+              secondaryContainer: '#F5EDE4',
+              onSecondaryContainer: '#C0784A',
+            }
+          }}
+        />
+      </PaperProvider>
+    </ProfileNavContext.Provider>
   );
 }

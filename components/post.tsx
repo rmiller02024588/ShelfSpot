@@ -4,6 +4,7 @@ import { getAuth } from 'firebase/auth';
 import { deleteDoc, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useProfileNav } from '../context/ProfileNavContext';
 
 type PostCardProps = {
   author: string;
@@ -28,6 +29,7 @@ const COLORS = {
 
 export default function PostCard({ author, item, description, address, image, time, postId }: PostCardProps) {
   const [saved, setSaved] = useState(false);
+  const { onViewProfile } = useProfileNav();
 
   useEffect(() => {
   const user = getAuth().currentUser;
@@ -65,7 +67,7 @@ export default function PostCard({ author, item, description, address, image, ti
     }
   };
 
-  const initials = author
+  const initials = (author ?? '')
     .split(' ')
     .map(w => w[0])
     .join('')
@@ -86,13 +88,19 @@ export default function PostCard({ author, item, description, address, image, ti
       <View style={styles.body}>
         {/* Author row */}
         <View style={styles.authorRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
-          <View style={styles.authorInfo}>
-            <Text style={styles.authorName}>{author}</Text>
-            <Text style={styles.timeText}>{time}</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.authorPressable}
+            onPress={() => onViewProfile(author)}
+            activeOpacity={0.6}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <View style={styles.authorInfo}>
+              <Text style={styles.authorName}>{author}</Text>
+              <Text style={styles.timeText}>{time}</Text>
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={handleSavePress}
             style={styles.saveButton}
@@ -177,6 +185,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  authorPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   avatar: {
     width: 34,

@@ -3,36 +3,20 @@ import { View } from 'react-native';
 
 const Icon = (props) => React.createElement(View, props);
 
-const createIconSet = () => Icon;
+Icon.createIconSet = () => Icon;
+Icon.Ionicons = Icon;
+Icon.MaterialIcons = Icon;
+Icon.MaterialCommunityIcons = Icon;
+Icon.FontAwesome = Icon;
+Icon.FontAwesome5 = Icon;
+Icon.Entypo = Icon;
+Icon.Feather = Icon;
+Icon.AntDesign = Icon;
+Icon.SimpleLineIcons = Icon;
+Icon.Octicons = Icon;
+Icon.Foundation = Icon;
+Icon.EvilIcons = Icon;
+Icon.Zocial = Icon;
+Icon.default = Icon;
 
-const Ionicons = Icon;
-const MaterialIcons = Icon;
-const MaterialCommunityIcons = Icon;
-const FontAwesome = Icon;
-const FontAwesome5 = Icon;
-const Entypo = Icon;
-const Feather = Icon;
-const AntDesign = Icon;
-const SimpleLineIcons = Icon;
-const Octicons = Icon;
-const Foundation = Icon;
-const EvilIcons = Icon;
-const Zocial = Icon;
-
-module.exports = {
-  createIconSet,
-  Ionicons,
-  MaterialIcons,
-  MaterialCommunityIcons,
-  FontAwesome,
-  FontAwesome5,
-  Entypo,
-  Feather,
-  AntDesign,
-  SimpleLineIcons,
-  Octicons,
-  Foundation,
-  EvilIcons,
-  Zocial,
-  default: Icon,
-};
+module.exports = Icon;

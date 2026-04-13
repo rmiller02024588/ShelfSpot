@@ -1,13 +1,33 @@
-import { render } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react-native';
 import React from 'react';
-import MapScreen from '../app/mapScreen';
 
-const getUserLocation = require('../app/mapScreen').getUserLocation;
+jest.mock('react-native-map-clustering', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockMapClustering = ({ children, style, ...props }) =>
+    React.createElement(View, { testID: 'map', style, ...props }, children);
 
-// mock the map library
-jest.mock('react-native-maps');
+  return {
+    __esModule: true,
+    default: MockMapClustering,
+  };
+});
 
-// mock expo-location
+jest.mock('react-native-maps', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockMap = ({ children, ...props }) => React.createElement(View, props, children);
+  const Marker = ({ children }) => React.createElement(View, { testID: 'marker' }, children);
+  const Circle = ({ children }) => React.createElement(View, { testID: 'circle' }, children);
+
+  return {
+    __esModule: true,
+    default: MockMap,
+    Marker,
+    Circle,
+  };
+});
+
 jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
   getCurrentPositionAsync: jest.fn().mockResolvedValue({
@@ -18,17 +38,23 @@ jest.mock('expo-location', () => ({
   }])
 }));
 
+const MapScreen = require('../app/mapScreen').default;
+const getUserLocation = require('../app/mapScreen').getUserLocation;
+
 describe('MapScreen', () => {
-  test('renders the map', () => {
+  test('renders the map', async () => {
     const { getByTestId } = render(<MapScreen />);
-    expect(getByTestId('map')).toBeTruthy();
+    await waitFor(() => {
+      expect(getByTestId('map')).toBeTruthy();
+    });
   });
 
-  test('renders at least one marker', () => {
+  test('renders at least one marker', async () => {
     const { getAllByTestId } = render(<MapScreen />);
-    const markers = getAllByTestId('marker');
-
-    expect(markers.length).toBeGreaterThan(0);
+    await waitFor(() => {
+      const markers = getAllByTestId('marker');
+      expect(markers.length).toBeGreaterThan(0);
+    });
   });
 
 });

@@ -4,7 +4,7 @@ import { addDoc, collection, GeoPoint, Timestamp } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MultiSelect } from 'react-native-element-dropdown';
+import { Dropdown } from 'react-native-element-dropdown';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { Appbar, TextInput } from 'react-native-paper';
 import { auth, db, storage } from '../Firebaseconfig';
@@ -185,7 +185,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
             {/* Category */}
             <View style={styles.card}>
               <Text style={styles.sectionLabel}>Category</Text>
-              <MultiSelect
+              <Dropdown
                 style={styles.dropdown}
                 placeholderStyle={styles.dropdownPlaceholder}
                 selectedTextStyle={styles.dropdownSelectedText}
@@ -199,11 +199,14 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                 placeholder="Select categories..."
                 searchPlaceholder="Search..."
                 value={selected}
-                onChange={item => setSelected(item)}
+
+                onChange={item => {
+                    setSelected(item);
+                }}  
                 renderLeftIcon={() => (
                   <AntDesign name="tag" style={styles.dropdownLeftIcon} color={COLORS.accent} size={16} />
                 )}
-                selectedStyle={styles.selectedChip}
+                //selectedStyle={styles.selectedChip}
               />
             </View>
 

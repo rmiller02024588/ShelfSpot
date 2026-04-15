@@ -87,7 +87,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
       onBack();
     }
     else {
-      Alert.alert('Missing fields', `Please fill out all fields and select at least one category. Values: {itemValue: ${itemValue}, addressValue: ${addressValue}, descriptionValue: ${descriptionValue}, selected: ${selected}, image: ${image}}`);
+      Alert.alert('Missing fields', 'Please fill out all fields and select at least one category.');
 
     }
   };

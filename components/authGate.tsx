@@ -1,5 +1,5 @@
 import { onAuthStateChanged, User } from "firebase/auth";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { BottomNavigation, PaperProvider } from "react-native-paper";
 import { auth } from "../Firebaseconfig";
@@ -25,6 +25,9 @@ export default function AuthGate() {
   const [showSettingsScreen, setShowSettingsScreen] = useState(false);
   const [viewingUserEmail, setViewingUserEmail] = useState<string | null>(null);
 
+  // adding this to check for a previous user
+  const prevUidRef = useRef<string | null | undefined>(undefined);
+
   const [routes] = useState([
     { key: 'home',    title: 'Home',    focusedIcon: 'home',               unfocusedIcon: 'home-outline',                testID: 'HomeScreen' },
     { key: 'search',  title: 'Search',  focusedIcon: 'magnify',            unfocusedIcon: 'magnify',                     testID: 'SearchScreen' },
@@ -32,8 +35,19 @@ export default function AuthGate() {
     { key: 'profile', title: 'Profile', focusedIcon: 'account-cowboy-hat', unfocusedIcon: 'account-cowboy-hat-outline',  testID: 'ProfileScreen' },
   ]);
 
-  useEffect(() => {
+   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      const incomingUid = firebaseUser?.uid ?? null;
+
+      // A new user session just started (login or signup)
+      if (incomingUid !== prevUidRef.current) {
+        setIndex(0);
+        setShowPostScreen(false);
+        setShowSettingsScreen(false);
+        setAuthScreen('login');
+      }
+
+      prevUidRef.current = incomingUid;
       setUser(firebaseUser);
       setLoading(false);
     });

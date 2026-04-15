@@ -38,7 +38,7 @@ const Header = ({ tab, onTabChange, postCount, onGoToSettings, initials, display
       </View>
       <View style={styles.stats}>
         <TouchableOpacity style={styles.stat} activeOpacity={0.6}>
-          <Text style={styles.statLabel}>Snacks: <Text style={styles.statNum}>{postCount}</Text></Text>
+          <Text style={styles.statLabel}>Licks: <Text style={styles.statNum}>{postCount}</Text></Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.stat} activeOpacity={0.6}>
           <Text style={styles.statLabel}>Taste Buds: <Text style={styles.statNum}>300</Text></Text>

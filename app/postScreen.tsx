@@ -74,6 +74,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
         type: selected,
         imageURL: await getDownloadURL(storageRef),
         coordinates: new GeoPoint(latValue, longValue),
+        expDate: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days from now
       };
 
       // Add to main posts collection

@@ -16,7 +16,7 @@ jest.mock('react-native-map-clustering', () => {
 jest.mock('react-native-maps', () => {
   const React = require('react');
   const { View } = require('react-native');
-  const MockMap = ({ children, ...props }) => React.createElement(View, props, children);
+  const MockMap = ({ children, ...props }) => React.createElement(View, { testID: 'map', ...props }, children);
   const Marker = ({ children }) => React.createElement(View, { testID: 'marker' }, children);
   const Circle = ({ children }) => React.createElement(View, { testID: 'circle' }, children);
 

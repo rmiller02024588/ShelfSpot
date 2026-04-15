@@ -3,10 +3,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { addDoc, collection, GeoPoint, Timestamp } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useState } from 'react';
-import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { MultiSelect } from 'react-native-element-dropdown';
+import { Alert, FlatList, Image, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Dropdown } from 'react-native-element-dropdown';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { Appbar, TextInput } from 'react-native-paper';
+import { Appbar } from 'react-native-paper';
 import { auth, db, storage } from '../Firebaseconfig';
 
 type PostScreenProps = {
@@ -35,7 +35,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
   const [descriptionValue, setDescriptionValue] = useState('');
   const [latValue, setLatValue] = useState(0);
   const [longValue, setLongValue] = useState(0);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const apiKey = process.env.EXPO_PUBLIC_API_KEY;
 
@@ -57,7 +57,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
   };
 
   const handlePost = async () => {
-    if (itemValue !== '' && addressValue !== '' && descriptionValue !== '' && selected.length > 0 && image !== null) {
+    if (itemValue !== '' && addressValue !== '' && descriptionValue !== '' && selected !== '' && image !== null) {
       const response = await fetch(image);
       const blob = await response.blob();
       const storageRef = ref(storage, `images/${Date.now()}.jpg`);
@@ -88,6 +88,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
     }
     else {
       Alert.alert('Missing fields', 'Please fill out all fields and select at least one category.');
+
     }
   };
 
@@ -131,11 +132,6 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                 placeholder="What did you find?"
                 placeholderTextColor={COLORS.textSecondary}
                 clearButtonMode="always"
-                mode="flat"
-                underlineColor="transparent"
-                activeUnderlineColor="transparent"
-                textColor={COLORS.text}
-                theme={{ colors: { background: COLORS.inputBg } }}
               />
             </View>
 
@@ -185,7 +181,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
             {/* Category */}
             <View style={styles.card}>
               <Text style={styles.sectionLabel}>Category</Text>
-              <MultiSelect
+              <Dropdown
                 style={styles.dropdown}
                 placeholderStyle={styles.dropdownPlaceholder}
                 selectedTextStyle={styles.dropdownSelectedText}
@@ -199,11 +195,14 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                 placeholder="Select categories..."
                 searchPlaceholder="Search..."
                 value={selected}
-                onChange={item => setSelected(item)}
+
+                onChange={item => {
+                    setSelected(item.value);
+                }}  
                 renderLeftIcon={() => (
                   <AntDesign name="tag" style={styles.dropdownLeftIcon} color={COLORS.accent} size={16} />
                 )}
-                selectedStyle={styles.selectedChip}
+                //selectedStyle={styles.selectedChip}
               />
             </View>
 
@@ -218,13 +217,14 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                 placeholder="Describe the item, condition, quantity..."
                 placeholderTextColor={COLORS.textSecondary}
                 clearButtonMode="always"
-                multiline
                 textAlignVertical="top"
-                mode="flat"
-                underlineColor="transparent"
-                activeUnderlineColor="transparent"
-                textColor={COLORS.text}
-                theme={{ colors: { background: COLORS.inputBg } }}
+                multiline
+                returnKeyType='done'
+                onKeyPress={({ nativeEvent }) => {
+                    if (nativeEvent.key === 'Enter') {
+                    Keyboard.dismiss();
+                    }
+                }}
               />
               <Text style={styles.charCount}>{descriptionValue.length} / 300</Text>
             </View>
@@ -330,7 +330,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 15,
     minHeight: 110,
-    paddingHorizontal: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: COLORS.text,
   },
   charCount: {
     fontSize: 12,

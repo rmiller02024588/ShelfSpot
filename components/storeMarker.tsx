@@ -1,11 +1,19 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-export default function StoreMarker({ onPress }: { onPress?: () => void }) {
+
+export default function StoreMarker({ count }: { count?: number }) {
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress}>
-      <MaterialCommunityIcons name="store" size={24} color="black" />
-    </TouchableOpacity>
+    <View style={{
+        width: 48,
+        height: 48,
+        borderRadius: 24, // makes it a circle
+        backgroundColor: '#e0e0e0', // light grey
+        alignItems: 'center',
+        justifyContent: 'center',
+    }}>
+        <MaterialCommunityIcons name="store" size={24} color="black" />
+    </View>
   );
 }
 

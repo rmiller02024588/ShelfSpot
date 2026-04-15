@@ -35,6 +35,9 @@ jest.mock('react-native-google-places-autocomplete', () => {
 jest.mock('react-native-element-dropdown', () => {
   const { TouchableOpacity, Text } = require('react-native');
   return {
+    Dropdown: ({ data, placeholder, value, onChange }: any) => (
+      <TouchableOpacity testID="dropdown"><Text>{placeholder}</Text></TouchableOpacity>
+    ),
     MultiSelect: ({ placeholder }: any) => (
       <TouchableOpacity testID="multi-select"><Text>{placeholder}</Text></TouchableOpacity>
     ),

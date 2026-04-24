@@ -17,14 +17,14 @@ type PostCardProps = {
 };
 
 const COLORS = {
-  background:    '#FAF7F2',
-  card:          '#FFFFFF',
-  accent:        '#C0784A',
-  accentLight:   '#F5EDE4',
-  text:          '#2C1A0E',
+  background: '#FAF7F2',
+  card: '#FFFFFF',
+  accent: '#C0784A',
+  accentLight: '#F5EDE4',
+  text: '#2C1A0E',
   textSecondary: '#8C7B6E',
-  border:        '#E8DDD4',
-  inputBg:       '#FDF9F5',
+  border: '#E8DDD4',
+  inputBg: '#FDF9F5',
 };
 
 export default function PostCard({ author, item, description, address, image, time, postId }: PostCardProps) {
@@ -32,21 +32,21 @@ export default function PostCard({ author, item, description, address, image, ti
   const { onViewProfile } = useProfileNav();
 
   useEffect(() => {
-  const user = getAuth().currentUser;
-  if (!user) return;
+    const user = getAuth().currentUser;
+    if (!user) return;
 
-  const ref = doc(db, 'users', user.uid, 'savedPosts', postId);
+    const ref = doc(db, 'users', user.uid, 'savedPosts', postId);
 
-  const unsubscribe = onSnapshot(ref, (docSnap) => {
-    setSaved(docSnap.exists());
-  });
+    const unsubscribe = onSnapshot(ref, (docSnap) => {
+      setSaved(docSnap.exists());
+    });
 
-  return unsubscribe;
-}, [postId, getAuth().currentUser?.uid]);
+    return unsubscribe;
+  }, [postId, getAuth().currentUser?.uid]);
 
   const handleSavePress = async () => {
-      const user = getAuth().currentUser;
-      if (!user) return;
+    const user = getAuth().currentUser;
+    if (!user) return;
     const newSavedState = !saved;
     setSaved(newSavedState);
     try {
@@ -56,10 +56,10 @@ export default function PostCard({ author, item, description, address, image, ti
         await unsavePost(postId);
       }
 
-       const docSnap = await getDoc(
-      doc(db, 'users', user.uid, 'savedPosts', postId)
-    );
-    setSaved(docSnap.exists());
+      const docSnap = await getDoc(
+        doc(db, 'users', user.uid, 'savedPosts', postId)
+      );
+      setSaved(docSnap.exists());
 
     } catch (err) {
       setSaved(!newSavedState);
@@ -68,13 +68,13 @@ export default function PostCard({ author, item, description, address, image, ti
   };
 
   const initials = author
-  ? author
+    ? author
       .split(' ')
       .map(w => w[0])
       .join('')
       .toUpperCase()
       .slice(0, 2)
-  : 'U';
+    : 'U';
 
   return (
     <View style={styles.card}>

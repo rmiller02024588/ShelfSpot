@@ -19,14 +19,14 @@ const CATEGORIES = [
 ];
 
 const COLORS = {
-    background: '#FAF7F2',
-    card: '#FFFFFF',
-    accent: '#C0784A',
-    accentLight: '#F5EDE4',
-    text: '#2C1A0E',
-    textSecondary: '#8C7B6E',
-    border: '#E8DDD4',
-    inputBg: '#FDF9F5',
+  background: '#FAF7F2',
+  card: '#FFFFFF',
+  accent: '#C0784A',
+  accentLight: '#F5EDE4',
+  text: '#2C1A0E',
+  textSecondary: '#8C7B6E',
+  border: '#E8DDD4',
+  inputBg: '#FDF9F5',
 };
 
 export default function PostScreen({ onBack }: PostScreenProps) {
@@ -46,7 +46,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -57,6 +57,11 @@ export default function PostScreen({ onBack }: PostScreenProps) {
   };
 
   const handlePost = async () => {
+    if (apiKey === undefined) {
+      Alert.alert('API Key Missing', 'To make a post, a Google Maps API key is required. Please set the EXPO_PUBLIC_API_KEY environment variable.');
+      return;
+    }
+
     if (itemValue !== '' && addressValue !== '' && descriptionValue !== '' && selected !== '' && image !== null) {
       const response = await fetch(image);
       const blob = await response.blob();
@@ -66,7 +71,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
       const user = auth.currentUser;
 
       const postData = {
-        author: user?.displayName || user?.email || "Unknown",
+        author: user?.displayName,
         item: itemValue,
         address: addressValue,
         description: descriptionValue,
@@ -89,7 +94,6 @@ export default function PostScreen({ onBack }: PostScreenProps) {
     }
     else {
       Alert.alert('Missing fields', 'Please fill out all fields and select at least one category.');
-
     }
   };
 
@@ -198,12 +202,12 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                 value={selected}
 
                 onChange={item => {
-                    setSelected(item.value);
-                }}  
+                  setSelected(item.value);
+                }}
                 renderLeftIcon={() => (
                   <AntDesign name="tag" style={styles.dropdownLeftIcon} color={COLORS.accent} size={16} />
                 )}
-                //selectedStyle={styles.selectedChip}
+              //selectedStyle={styles.selectedChip}
               />
             </View>
 
@@ -222,9 +226,9 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                 multiline
                 returnKeyType='done'
                 onKeyPress={({ nativeEvent }) => {
-                    if (nativeEvent.key === 'Enter') {
+                  if (nativeEvent.key === 'Enter') {
                     Keyboard.dismiss();
-                    }
+                  }
                 }}
               />
               <Text style={styles.charCount}>{descriptionValue.length} / 300</Text>

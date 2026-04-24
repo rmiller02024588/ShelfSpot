@@ -87,8 +87,8 @@ test('shows alert when posting with empty fields', async () => {
   fireEvent.press(getByText('Post'));
   await waitFor(() => {
     expect(Alert.alert).toHaveBeenCalledWith(
-      'Missing fields',
-      'Please fill out all fields and select at least one category.'
+      'API Key Missing',
+      'To make a post, a Google Maps API key is required. Please set the EXPO_PUBLIC_API_KEY environment variable.'
     );
   });
 });

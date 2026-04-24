@@ -45,8 +45,11 @@ jest.mock('firebase/firestore', () => {
     getDoc: jest.fn(() => Promise.resolve(mockSavedPost)),
     onSnapshot: jest.fn((query, callback) => {
       callback({ docs: [mockOwnPost] });
-      return jest.fn(); // unsubscribe
+      return jest.fn();
     }),
+    getCountFromServer: jest.fn(() =>
+      Promise.resolve({ data: () => ({ count: 0 }) })
+    ),
   };
 });
 

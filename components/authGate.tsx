@@ -1,3 +1,4 @@
+import FollowingScreen from "@/app/followingScreen";
 import { onAuthStateChanged, User } from "firebase/auth";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -10,9 +11,9 @@ import PostScreen from '../app/postScreen';
 import ProfileScreen from "../app/profileScreen";
 import SearchScreen from "../app/searchScreen";
 import SettingsScreen from "../app/settingsScreen";
-import SignUpScreen from './../app/signUpScreen';
 import ViewUserProfileScreen from "../app/viewUserProfileScreen";
 import { ProfileNavContext } from "../context/ProfileNavContext";
+import SignUpScreen from './../app/signUpScreen';
 
 
 export default function AuthGate() {
@@ -23,19 +24,20 @@ export default function AuthGate() {
   const [authScreen, setAuthScreen] = useState<'login' | 'signup'>('login');
   const [showPostScreen, setShowPostScreen] = useState(false);
   const [showSettingsScreen, setShowSettingsScreen] = useState(false);
+  const [showFollowingScreen, setShowFollowingScreen] = useState(false);
   const [viewingUserEmail, setViewingUserEmail] = useState<string | null>(null);
 
   // adding this to check for a previous user
   const prevUidRef = useRef<string | null | undefined>(undefined);
 
   const [routes] = useState([
-    { key: 'home',    title: 'Home',    focusedIcon: 'home',               unfocusedIcon: 'home-outline',                testID: 'HomeScreen' },
-    { key: 'search',  title: 'Search',  focusedIcon: 'magnify',            unfocusedIcon: 'magnify',                     testID: 'SearchScreen' },
-    { key: 'map',     title: 'Map',     focusedIcon: 'map',                unfocusedIcon: 'map-outline',                 testID: 'MapScreen' },
-    { key: 'profile', title: 'Profile', focusedIcon: 'account-cowboy-hat', unfocusedIcon: 'account-cowboy-hat-outline',  testID: 'ProfileScreen' },
+    { key: 'home', title: 'Home', focusedIcon: 'home', unfocusedIcon: 'home-outline', testID: 'HomeScreen' },
+    { key: 'search', title: 'Search', focusedIcon: 'magnify', unfocusedIcon: 'magnify', testID: 'SearchScreen' },
+    { key: 'map', title: 'Map', focusedIcon: 'map', unfocusedIcon: 'map-outline', testID: 'MapScreen' },
+    { key: 'profile', title: 'Profile', focusedIcon: 'account-cowboy-hat', unfocusedIcon: 'account-cowboy-hat-outline', testID: 'ProfileScreen' },
   ]);
 
-   useEffect(() => {
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       const incomingUid = firebaseUser?.uid ?? null;
 
@@ -44,6 +46,7 @@ export default function AuthGate() {
         setIndex(0);
         setShowPostScreen(false);
         setShowSettingsScreen(false);
+        setShowFollowingScreen(false);
         setAuthScreen('login');
       }
 
@@ -76,15 +79,29 @@ export default function AuthGate() {
     return <SettingsScreen onBack={() => setShowSettingsScreen(false)} />;
   }
 
+  if (showFollowingScreen) {
+    return (
+      <ProfileNavContext.Provider value={{
+        onViewProfile: (email) => {
+          setShowFollowingScreen(false);
+          setViewingUserEmail(email);
+        }
+      }}>
+        <FollowingScreen onBack={() => setShowFollowingScreen(false)} />
+      </ProfileNavContext.Provider>
+    );
+  }
+
   if (viewingUserEmail) {
     return <ViewUserProfileScreen userEmail={viewingUserEmail} onBack={() => setViewingUserEmail(null)} />;
   }
 
   const renderScene = BottomNavigation.SceneMap({
-    home:    () => <HomeScreen onAddPost={() => setShowPostScreen(true)} />,
-    search:  () => <SearchScreen />,
-    map:     () => <MapScreen />,
-    profile: () => <ProfileScreen onGoToSettings={() => setShowSettingsScreen(true)} />,
+    home: () => <HomeScreen onAddPost={() => setShowPostScreen(true)} />,
+    search: () => <SearchScreen />,
+    map: () => <MapScreen />,
+    profile: () => <ProfileScreen onGoToSettings={() => setShowSettingsScreen(true)}
+      onGoToFollowing={() => setShowFollowingScreen(true)} />,
   });
 
   return (

@@ -1,4 +1,5 @@
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { collection, deleteDoc, doc, getDocs, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
@@ -6,15 +7,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Post from '../components/post';
 import { db } from '../Firebaseconfig';
 
+
 const COLORS = {
-  background:    '#FAF7F2',
-  card:          '#FFFFFF',
-  accent:        '#C0784A',
-  accentLight:   '#F5EDE4',
-  text:          '#2C1A0E',
+  background: '#FAF7F2',
+  card: '#FFFFFF',
+  accent: '#C0784A',
+  accentLight: '#F5EDE4',
+  text: '#2C1A0E',
   textSecondary: '#8C7B6E',
-  border:        '#E8DDD4',
-  inputBg:       '#FDF9F5',
+  border: '#E8DDD4',
+  inputBg: '#FDF9F5',
 };
 
 type HeaderProps = {
@@ -22,9 +24,11 @@ type HeaderProps = {
   initials: string;
   displayName: string;
   onBack: () => void;
+  following: boolean;
+  updateFollowing: () => void;
 };
 
-const Header = ({ postCount, initials, displayName, onBack }: HeaderProps) => (
+const Header = ({ postCount, initials, displayName, onBack, following, updateFollowing }: HeaderProps) => (
   <View style={styles.header}>
     <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.6}>
       <Text style={styles.backText}>← Back</Text>
@@ -36,10 +40,14 @@ const Header = ({ postCount, initials, displayName, onBack }: HeaderProps) => (
       </View>
       <View style={styles.stats}>
         <View style={styles.stat}>
-          <Text style={styles.statLabel}>Snacks: <Text style={styles.statNum}>{postCount}</Text></Text>
+          <Text style={{ color: '#000000', fontWeight: '600' }}>Snacks: {postCount}</Text>
         </View>
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>Taste Buds: <Text style={styles.statNum}>300</Text></Text>
+        <View>
+          {displayName !== getAuth().currentUser?.displayName && (
+            <TouchableOpacity onPress={updateFollowing} activeOpacity={0.7} style={{ marginTop: 8, backgroundColor: COLORS.accent, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 }}>
+              <Text style={{ color: '#fff', fontWeight: '600' }}>{following ? 'Unfollow' : 'Follow'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
@@ -59,6 +67,34 @@ type ViewUserProfileScreenProps = {
 export default function ViewUserProfileScreen({ userEmail, onBack }: ViewUserProfileScreenProps) {
   const [posts, setPosts] = useState<any[]>([]);
   const insets = useSafeAreaInsets();
+  const [following, setFollowing] = useState(false);
+
+  useEffect(() => {
+    const currentUser = getAuth().currentUser;
+    if (!currentUser || !userEmail) return;
+
+    const followingRef = doc(db, 'users', currentUser.uid, 'following', userEmail);
+    const unsubscribe = onSnapshot(followingRef, (docSnap) => {
+      setFollowing(docSnap.exists());
+    });
+
+    return unsubscribe;
+  }, [userEmail, getAuth().currentUser?.uid]);
+
+  const handleFollowToggle = async () => {
+    const currentUser = getAuth().currentUser;
+    if (!currentUser) return;
+
+    const followingRef = doc(db, 'users', currentUser.uid, 'following', userEmail);
+    if (following) {
+      await deleteDoc(followingRef);
+      setFollowing(false);
+    } else {
+      await setDoc(followingRef, {});
+      setFollowing(true);
+    }
+
+  }
 
   useEffect(() => {
     if (!userEmail) return;
@@ -74,6 +110,7 @@ export default function ViewUserProfileScreen({ userEmail, onBack }: ViewUserPro
   const username = userEmail ? userEmail.split('@')[0] : 'Unknown';
   const initials = username.slice(0, 2).toUpperCase();
 
+
   return (
     <FlatList
       data={posts}
@@ -85,6 +122,8 @@ export default function ViewUserProfileScreen({ userEmail, onBack }: ViewUserPro
           initials={initials}
           displayName={username}
           onBack={onBack}
+          following={following}
+          updateFollowing={handleFollowToggle}
         />
       }
       contentContainerStyle={[styles.listContent, { paddingTop: insets.top }]}

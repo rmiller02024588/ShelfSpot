@@ -1,5 +1,5 @@
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getCountFromServer, getDoc, onSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
@@ -18,18 +18,18 @@ const COLORS = {
   inputBg:       '#FDF9F5',
 };
 
-const MOCK_SAVES = Array.from({ length: 4 }, (_, i) => ({ id: String(i) }));
-
 type HeaderProps = {
   tab: 'posts' | 'saves';
   onTabChange: (t: 'posts' | 'saves') => void;
   postCount: number;
+  followingCount?: number;
   onGoToSettings?: () => void;
+  onGoToFollowing?: () => void;
   initials: string;
   displayName: string;
 };
 
-const Header = ({ tab, onTabChange, postCount, onGoToSettings, initials, displayName }: HeaderProps) => (
+const Header = ({ tab, onTabChange, postCount, followingCount, onGoToSettings, onGoToFollowing, initials, displayName }: HeaderProps) => (
   <View style={styles.header}>
     <View style={styles.avatarRow}>
       <View style={styles.centerSection}>
@@ -38,13 +38,13 @@ const Header = ({ tab, onTabChange, postCount, onGoToSettings, initials, display
       </View>
       <View style={styles.stats}>
         <TouchableOpacity style={styles.stat} activeOpacity={0.6}>
-          <Text style={styles.statLabel}>Snacks: <Text style={styles.statNum}>{postCount}</Text></Text>
+          <Text style={{ color: '#000000', fontWeight: '600' }}>Snacks: {postCount}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.stat} activeOpacity={0.6}>
-          <Text style={styles.statLabel}>Taste Buds: <Text style={styles.statNum}>300</Text></Text>
+        <TouchableOpacity onPress={onGoToFollowing} activeOpacity={0.7} style={{ marginTop: 8, backgroundColor: COLORS.accent, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Taste Buds: {followingCount}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.stat} onPress={onGoToSettings} activeOpacity={0.6}>
-          <Text style={styles.statLabel}>Settings</Text>
+        <TouchableOpacity onPress={onGoToSettings} activeOpacity={0.7} style={{ marginTop: 8, backgroundColor: COLORS.accent, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Settings</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -65,13 +65,15 @@ const Header = ({ tab, onTabChange, postCount, onGoToSettings, initials, display
   </View>
 );
 
-type ProfileScreenProps = { onGoToSettings?: () => void };
+type ProfileScreenProps = { onGoToSettings?: () => void  
+  onGoToFollowing?: () => void };
 
-export default function ProfileScreen({ onGoToSettings }: ProfileScreenProps) {
+export default function ProfileScreen({ onGoToSettings, onGoToFollowing }: ProfileScreenProps) {
   const [tab, setTab] = useState<'posts' | 'saves'>('posts');
   const [posts, setPosts] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
   const [savedPosts, setSavedPosts] = useState<any[]>([]);
+  const [followingCount, setFollowingCount] = useState<number>(0);
   const data = tab === 'posts' ? posts : savedPosts;
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
@@ -112,6 +114,17 @@ export default function ProfileScreen({ onGoToSettings }: ProfileScreenProps) {
     return unsubscribe;
   }, [currentUser?.uid]);
 
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setFollowingCount(0);
+      return;
+    }
+
+    getCountFromServer(collection(db, 'users', currentUser.uid, 'following'))
+      .then((snap) => setFollowingCount(snap.data().count))
+      .catch(() => setFollowingCount(0));
+  }, [currentUser?.uid]);
+
   const username = currentUser?.displayName
   || currentUser?.email?.split('@')[0]
   || 'Unknown';
@@ -129,7 +142,9 @@ export default function ProfileScreen({ onGoToSettings }: ProfileScreenProps) {
           tab={tab}
           onTabChange={setTab}
           postCount={posts.length}
+          followingCount={followingCount}
           onGoToSettings={onGoToSettings}
+          onGoToFollowing={onGoToFollowing}
           initials={initials}
           displayName={username}
         />

@@ -47,7 +47,7 @@ git clone https://github.com/rmiller02024588/ShelfSpot.git
 cd ShelfSpot
 npm install
 ```
-IMPORTANT: In order to access map feature you need to aquire a google maps api key and place it in a venv folder before running app, we can not provide this for every user individually for security purposes.
+IMPORTANT: In order to access map feature you need to aquire a google maps api key and place it in a .env folder before running app, we can not provide this for every user individually for security purposes.
 
 ## Running the App
 

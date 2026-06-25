@@ -48,6 +48,7 @@ cd ShelfSpot
 npm install
 cp .env.example .env
 ```
+IMPORTANT: In order to access map feature you need to aquire a google maps api key and place it in a .env folder before running app, we can not provide this for every user individually for security purposes.
 
 Fill in `.env` with your Google Maps API key and Supabase credentials (`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` from your [Supabase project settings](https://supabase.com/dashboard)).
 

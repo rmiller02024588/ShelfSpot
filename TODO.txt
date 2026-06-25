@@ -1,6 +1,14 @@
 TODO
 
-GET THE APPLE BUILD WORKING
+Paper
+    - fix the flow diagrams
+    - Make a new architure diagram
+    - edit the use case diagram
+    - check tense of the entire paper
+    - Update screen shots
+        - combine mock figures and real screenshots in section 4.5
+        - fix the figures formating
+    - make sure the paper is consistently formatted
 
 General UI/Beautification
     - Big Logo
@@ -9,24 +17,13 @@ General UI/Beautification
         ~ Both a light and Dark Verison
 
 User posts
-    - post filtering (area, item type)
 
 Map screen
- - update map screen when databse changes
- - expo location library inegration
- - displaying some sort of icon on the map (probably not images for performance reasons)
- - turn off the map if there is no location service enabled?
 
 profile screen
- - None
 
  Search
- - Redesigned post component with view more drop down
- - No post image or username. Only item, location, and time.
 
 seetings screen/auth implementation:
  - forgot password button
- - again create user database
- - able to change username and prof picture
- - Light/Dark Mode
  

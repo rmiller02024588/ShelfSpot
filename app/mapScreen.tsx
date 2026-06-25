@@ -1,8 +1,9 @@
+import MinPostCard from '@/components/minPost';
 import * as Location from 'expo-location';
 import type { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Circle, Marker } from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 import StoreMarker from '../components/storeMarker';
 import { onAuthStateChanged } from '../lib/auth';
 import { mapPost, type AppPost } from '../lib/posts';
@@ -123,12 +124,6 @@ export default function MapScreen() {
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
         }}>
-            <Circle
-            center={{ latitude: location[0], longitude: location[1] }}
-            radius={locationRange}
-            strokeColor="rgba(0, 0, 255, 0.5)"
-            fillColor="rgba(0, 0, 255, 0.1)"
-            />
             {groupedStores.map((store) => (
                 <Marker
                     key={store.address}
@@ -154,21 +149,26 @@ export default function MapScreen() {
                 padding: 20,
                 borderTopLeftRadius: 20,
                 borderTopRightRadius: 20,
-                maxHeight: '50%'
+                maxHeight: '100%'
                 }}>
                     <Text style={{ fontSize: 18, fontWeight: 'bold' }}>
                         {selectedStore?.address}
                     </Text>
 
                     <FlatList
-                    data={selectedStore?.posts}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <View style={{ marginVertical: 8 }}>
-                            <Text>{item.item}</Text>
-                            <Text>{item.description}</Text>
-                        </View>
-                    )}
+                            data={selectedStore?.posts}
+                            keyExtractor={(item) => item.id}
+                            renderItem={({ item }) => (
+                            <MinPostCard
+                                author={item.author}
+                                time={item.time?.toDate().toLocaleString() ?? ''}
+                                item={item.item}
+                                description={item.description}
+                                address={item.address}
+                                image={item.imageURL}
+                                postId={item.id}
+                            />
+                            )}
                     />
 
                     <TouchableOpacity onPress={() => setSelectedStore(null)}>

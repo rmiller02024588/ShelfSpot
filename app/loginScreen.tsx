@@ -1,7 +1,6 @@
-import { signInWithEmailAndPassword } from "firebase/auth";
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { auth } from "../Firebaseconfig";
+import { supabase } from "../Supabaseconfig";
 
 const COLORS = {
   background:    '#FAF7F2',
@@ -20,7 +19,7 @@ export default function LoginScreen({ onGoToSignup }: { onGoToSignup?: () => voi
 
   const login = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await supabase.auth.signInWithPassword({ email, password });
     } catch (error) {
       console.log(error);
     }

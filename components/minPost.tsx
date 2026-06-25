@@ -1,9 +1,8 @@
-import { db } from '@/Firebaseconfig';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { getAuth } from 'firebase/auth';
-import { deleteDoc, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getCurrentUser } from '../lib/auth';
+import { supabase } from '../Supabaseconfig';
 
 type PostCardProps = {
     author: string;
@@ -33,14 +32,38 @@ export default function MinPostCard({ author, item, description, address, image,
     const rotateAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
-        const user = getAuth().currentUser;
-        if (!user) return;
-        const ref = doc(db, 'users', user.uid, 'savedPosts', postId);
-        const unsubscribe = onSnapshot(ref, (docSnap) => {
-            setSaved(docSnap.exists());
-        });
-        return unsubscribe;
-    }, [postId, getAuth().currentUser?.uid]);
+        let channel: ReturnType<typeof supabase.channel> | null = null;
+
+        const setup = async () => {
+            const user = await getCurrentUser();
+            if (!user) return;
+
+            const checkSaved = async () => {
+                const { data } = await supabase
+                    .from('saved_posts')
+                    .select('post_id')
+                    .eq('user_id', user.id)
+                    .eq('post_id', postId)
+                    .maybeSingle();
+                setSaved(!!data);
+            };
+
+            await checkSaved();
+
+            channel = supabase
+                .channel(`min-saved-post-${user.id}-${postId}`)
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'saved_posts',
+                    filter: `user_id=eq.${user.id}`,
+                }, () => checkSaved())
+                .subscribe();
+        };
+
+        setup();
+        return () => { if (channel) supabase.removeChannel(channel); };
+    }, [postId]);
 
     const toggleExpanded = () => {
         if (!expanded) {
@@ -65,18 +88,23 @@ export default function MinPostCard({ author, item, description, address, image,
     });
 
     const handleSavePress = async () => {
-        const user = getAuth().currentUser;
+        const user = await getCurrentUser();
         if (!user) return;
         const newSavedState = !saved;
         setSaved(newSavedState);
         try {
             if (newSavedState) {
-                await savePost(postId);
+                await savePost(user.id, postId);
             } else {
-                await unsavePost(postId);
+                await unsavePost(user.id, postId);
             }
-            const docSnap = await getDoc(doc(db, 'users', user.uid, 'savedPosts', postId));
-            setSaved(docSnap.exists());
+            const { data } = await supabase
+                .from('saved_posts')
+                .select('post_id')
+                .eq('user_id', user.id)
+                .eq('post_id', postId)
+                .maybeSingle();
+            setSaved(!!data);
         } catch (err) {
             setSaved(!newSavedState);
             console.error('Error saving/unsaving post:', err);
@@ -92,7 +120,6 @@ export default function MinPostCard({ author, item, description, address, image,
 
     return (
         <View style={styles.card}>
-            {/* Min View */}
             <View style={styles.minRow}>
                 <View style={styles.minInfo}>
                     <Text style={styles.itemName} numberOfLines={1}>{item}</Text>
@@ -124,7 +151,6 @@ export default function MinPostCard({ author, item, description, address, image,
                 </TouchableOpacity>
             </View>
 
-            {/* Expanded View */}
             {expanded && (
                 <Animated.View style={[styles.expandedContent, { opacity: fadeAnim }]}>
                     <View style={styles.divider} />
@@ -174,16 +200,12 @@ export default function MinPostCard({ author, item, description, address, image,
     );
 }
 
-const savePost = async (postId: string) => {
-    const user = getAuth().currentUser;
-    if (!user) return;
-    await setDoc(doc(db, 'users', user.uid, 'savedPosts', postId), {});
+const savePost = async (userId: string, postId: string) => {
+    await supabase.from('saved_posts').insert({ user_id: userId, post_id: postId });
 };
 
-const unsavePost = async (postId: string) => {
-    const user = getAuth().currentUser;
-    if (!user) return;
-    await deleteDoc(doc(db, 'users', user.uid, 'savedPosts', postId));
+const unsavePost = async (userId: string, postId: string) => {
+    await supabase.from('saved_posts').delete().eq('user_id', userId).eq('post_id', postId);
 };
 
 const styles = StyleSheet.create({

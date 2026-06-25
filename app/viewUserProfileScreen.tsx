@@ -1,11 +1,11 @@
-import { getAuth } from 'firebase/auth';
-import { collection, deleteDoc, doc, getDocs, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Post from '../components/post';
-import { db } from '../Firebaseconfig';
+import { getCurrentUser, getDisplayName } from '../lib/auth';
+import { formatPostTime, mapPost, type AppPost } from '../lib/posts';
+import { supabase } from '../Supabaseconfig';
 
 
 const COLORS = {
@@ -21,14 +21,16 @@ const COLORS = {
 
 type HeaderProps = {
   postCount: number;
+  followingCount: number;
   initials: string;
   displayName: string;
   onBack: () => void;
   following: boolean;
   updateFollowing: () => void;
+  currentDisplayName: string;
 };
 
-const Header = ({ postCount, initials, displayName, onBack, following, updateFollowing }: HeaderProps) => (
+const Header = ({ postCount, followingCount, initials, displayName, onBack, following, updateFollowing, currentDisplayName }: HeaderProps) => (
   <View style={styles.header}>
     <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.6}>
       <Text style={styles.backText}>← Back</Text>
@@ -42,73 +44,131 @@ const Header = ({ postCount, initials, displayName, onBack, following, updateFol
         <View style={styles.stat}>
           <Text style={{ color: '#000000', fontWeight: '600' }}>Snacks: {postCount}</Text>
         </View>
-        <View>
-          {displayName !== getAuth().currentUser?.displayName && (
+        <View style={styles.stat}>
+          <Text style={{ color: '#000000', fontWeight: '600' }}>Taste Buds: {followingCount}</Text>
+        </View>
+        <View style={styles.stat}>
+          {displayName !== currentDisplayName && (
             <TouchableOpacity onPress={updateFollowing} activeOpacity={0.7} style={{ marginTop: 8, backgroundColor: COLORS.accent, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 }}>
               <Text style={{ color: '#fff', fontWeight: '600' }}>{following ? 'Unfollow' : 'Follow'}</Text>
             </TouchableOpacity>
           )}
-        </View>
-      </View>
-    </View>
-    <View style={styles.tabRow}>
-      <View style={[styles.tab, styles.tabActive]}>
-        <Text style={[styles.tabText, styles.tabTextActive]}>Posts</Text>
+          </View>
       </View>
     </View>
   </View>
 );
 
 type ViewUserProfileScreenProps = {
-  userEmail: string;
+  userId: string;
   onBack: () => void;
 };
 
-export default function ViewUserProfileScreen({ userEmail, onBack }: ViewUserProfileScreenProps) {
-  const [posts, setPosts] = useState<any[]>([]);
+export default function ViewUserProfileScreen({ userId, onBack }: ViewUserProfileScreenProps) {
+  const [posts, setPosts] = useState<AppPost[]>([]);
   const insets = useSafeAreaInsets();
   const [following, setFollowing] = useState(false);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [currentDisplayName, setCurrentDisplayName] = useState('');
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
+  const [profileDisplayName, setProfileDisplayName] = useState('');
 
   useEffect(() => {
-    const currentUser = getAuth().currentUser;
-    if (!currentUser || !userEmail) return;
+    if (!userId) return;
 
-    const followingRef = doc(db, 'users', currentUser.uid, 'following', userEmail);
-    const unsubscribe = onSnapshot(followingRef, (docSnap) => {
-      setFollowing(docSnap.exists());
-    });
+    const fetchProfile = async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, display_name, email')
+        .eq('id', userId)
+        .maybeSingle();
 
-    return unsubscribe;
-  }, [userEmail, getAuth().currentUser?.uid]);
+      if (profile) {
+        setTargetUserId(profile.id);
+        setProfileDisplayName(profile.display_name || profile.email.split('@')[0]);
+      }
+    };
+
+    fetchProfile();
+  }, [userId]);
+
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const setup = async () => {
+      const currentUser = await getCurrentUser();
+      if (!currentUser || !targetUserId) return;
+
+      setCurrentDisplayName(getDisplayName(currentUser));
+
+      const { count } = await supabase
+        .from('following')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', currentUser.id);
+      setFollowingCount(count ?? 0);
+
+      const { data } = await supabase
+        .from('following')
+        .select('followed_id')
+        .eq('follower_id', currentUser.id)
+        .eq('followed_id', targetUserId)
+        .maybeSingle();
+      setFollowing(!!data);
+
+      channel = supabase
+        .channel(`following-${currentUser.id}-${targetUserId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'following',
+          filter: `follower_id=eq.${currentUser.id}`,
+        }, async () => {
+          const { data: row } = await supabase
+            .from('following')
+            .select('followed_id')
+            .eq('follower_id', currentUser.id)
+            .eq('followed_id', targetUserId)
+            .maybeSingle();
+          setFollowing(!!row);
+        })
+        .subscribe();
+    };
+
+    setup();
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [targetUserId]);
 
   const handleFollowToggle = async () => {
-    const currentUser = getAuth().currentUser;
-    if (!currentUser) return;
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !targetUserId) return;
 
-    const followingRef = doc(db, 'users', currentUser.uid, 'following', userEmail);
     if (following) {
-      await deleteDoc(followingRef);
+      await supabase
+        .from('following')
+        .delete()
+        .eq('follower_id', currentUser.id)
+        .eq('followed_id', targetUserId);
       setFollowing(false);
     } else {
-      await setDoc(followingRef, {});
+      await supabase.from('following').insert({
+        follower_id: currentUser.id,
+        followed_id: targetUserId,
+      });
       setFollowing(true);
     }
-
-  }
+  };
 
   useEffect(() => {
-    if (!userEmail) return;
+    if (!targetUserId) return;
+
     const fetchPosts = async () => {
-      const q = query(collection(db, 'posts'), where('author', '==', userEmail));
-      const snapshot = await getDocs(q);
-      const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPosts(fetched);
+      const { data } = await supabase.from('posts').select('*').eq('user_id', targetUserId);
+      if (data) setPosts(data.map(mapPost));
     };
     fetchPosts();
-  }, [userEmail]);
+  }, [targetUserId]);
 
-  const username = userEmail ? userEmail.split('@')[0] : 'Unknown';
-  const initials = username.slice(0, 2).toUpperCase();
+  const initials = profileDisplayName.slice(0, 2).toUpperCase();
 
 
   return (
@@ -119,18 +179,21 @@ export default function ViewUserProfileScreen({ userEmail, onBack }: ViewUserPro
       ListHeaderComponent={
         <Header
           postCount={posts.length}
+          followingCount={followingCount}
           initials={initials}
-          displayName={username}
+          displayName={profileDisplayName}
           onBack={onBack}
           following={following}
           updateFollowing={handleFollowToggle}
+          currentDisplayName={currentDisplayName}
         />
       }
       contentContainerStyle={[styles.listContent, { paddingTop: insets.top }]}
       renderItem={({ item }) => (
         <Post
           author={item.author ?? 'Unknown'}
-          time={item.time?.toDate().toLocaleString() ?? ''}
+          userId={item.user_id}
+          time={formatPostTime(item.time)}
           item={item.item}
           description={item.description}
           address={item.address}

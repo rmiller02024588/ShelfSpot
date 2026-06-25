@@ -1,20 +1,10 @@
 import MinPostCard from '@/components/minPost';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, TextInput, View } from 'react-native';
 import { Appbar } from 'react-native-paper';
-import { db } from '../Firebaseconfig';
-
-interface PostData {
-  id: string;
-  author: string;
-  description: string;
-  imageURL: string;
-  item: string;
-  time: any;
-  address: string;
-}
+import { formatPostTime, mapPost, type AppPost } from '../lib/posts';
+import { supabase } from '../Supabaseconfig';
 
 const COLORS = {
   background:    '#FAF7F2',
@@ -29,41 +19,29 @@ const COLORS = {
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [posts, setPosts] = useState<PostData[]>([]);
+  const [posts, setPosts] = useState<AppPost[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchPosts = async (search: string) => {
     setRefreshing(true);
-    const q1 = search.trim()
-      ? query(
-          collection(db, 'posts'),
-          where('item', '>=', search),
-          where('item', '<=', search + '\uf8ff'),
-          orderBy('item')
-        )
-      : query(collection(db, 'posts'), orderBy('time', 'desc'));
+    const trimmed = search.trim();
 
-    const q2 = search.trim()
-      ? query(
-          collection(db, 'posts'),
-          where('author', '>=', search),
-          where('author', '<=', search + '\uf8ff'),
-          orderBy('author')
-        )
-      : query(collection(db, 'posts'), orderBy('time', 'desc'));
+    if (trimmed) {
+      const [byItem, byAuthor] = await Promise.all([
+        supabase.from('posts').select('*').ilike('item', `${trimmed}%`).order('item'),
+        supabase.from('posts').select('*').ilike('author', `${trimmed}%`).order('author'),
+      ]);
+      const combined = [
+        ...(byItem.data ?? []).map(mapPost),
+        ...(byAuthor.data ?? []).map(mapPost),
+      ];
+      const unique = combined.filter((post, index, self) => self.findIndex(p => p.id === post.id) === index);
+      setPosts(unique);
+    } else {
+      const { data } = await supabase.from('posts').select('*').order('time', { ascending: false });
+      setPosts((data ?? []).map(mapPost));
+    }
 
-    const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-    const fetched1 = snapshot1.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data() as Omit<PostData, 'id'>
-    }));
-    const fetched2 = snapshot2.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data() as Omit<PostData, 'id'>
-    }));
-    const combined = [...fetched1, ...fetched2];
-    const unique = combined.filter((post, index, self) => self.findIndex(p => p.id === post.id) === index);
-    setPosts(unique);
     setRefreshing(false);
   };
 
@@ -100,7 +78,7 @@ export default function SearchScreen() {
         renderItem={({ item }) => (
           <MinPostCard
             author={item.author}
-            time={item.time?.toDate().toLocaleString() ?? ''}
+            time={formatPostTime(item.time)}
             item={item.item}
             description={item.description}
             address={item.address}

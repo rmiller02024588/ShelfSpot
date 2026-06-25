@@ -1,9 +1,8 @@
 import FollowingCard from '@/components/followingCard';
-import { collection, getDocs } from 'firebase/firestore';
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Appbar } from 'react-native-paper';
-import { auth, db } from '../Firebaseconfig';
+import { supabase } from '../Supabaseconfig';
 
 const COLORS = {
   background: '#FAF7F2',
@@ -18,8 +17,8 @@ const COLORS = {
 
 interface ProfileData {
   id: string;
-  name: string;
   email: string;
+  displayName: string;
 }
 
 export default function FollowingScreen({ onBack }: { onBack?: () => void }) {
@@ -28,15 +27,30 @@ export default function FollowingScreen({ onBack }: { onBack?: () => void }) {
 
   const fetchFollowing = async () => {
     setRefreshing(true);
-    const uid = auth.currentUser?.uid;
-    if (!uid) { setRefreshing(false); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setRefreshing(false); return; }
 
-    const followingSnap = await getDocs(collection(db, 'users', uid, 'following'));
+    const { data: follows } = await supabase
+      .from('following')
+      .select('followed_id')
+      .eq('follower_id', user.id);
 
-    const fetched = followingSnap.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data().name,
-      email: doc.data().email,
+    const followedIds = (follows ?? []).map(row => row.followed_id as string);
+    if (followedIds.length === 0) {
+      setFollowing([]);
+      setRefreshing(false);
+      return;
+    }
+
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, email, display_name')
+      .in('id', followedIds);
+
+    const fetched = (profiles ?? []).map(profile => ({
+      id: profile.id,
+      email: profile.email,
+      displayName: profile.display_name || profile.email.split('@')[0],
     }));
 
     setFollowing(fetched);
@@ -61,7 +75,11 @@ export default function FollowingScreen({ onBack }: { onBack?: () => void }) {
         }
       >
         {following.map(profile => (
-          <FollowingCard key={profile.id} username={profile.id} />
+          <FollowingCard
+            key={profile.id}
+            userId={profile.id}
+            displayName={profile.displayName}
+          />
         ))}
       </ScrollView>
     </View>

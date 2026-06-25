@@ -1,13 +1,12 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
 import * as ImagePicker from 'expo-image-picker';
-import { addDoc, collection, GeoPoint, Timestamp } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import React, { useState } from 'react';
 import { Alert, FlatList, Image, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { Appbar } from 'react-native-paper';
-import { auth, db, storage } from '../Firebaseconfig';
+import { getDisplayName } from '../lib/auth';
+import { supabase } from '../Supabaseconfig';
 
 type PostScreenProps = {
   onBack: () => void;
@@ -64,30 +63,38 @@ export default function PostScreen({ onBack }: PostScreenProps) {
 
     if (itemValue !== '' && addressValue !== '' && descriptionValue !== '' && selected !== '' && image !== null) {
       const response = await fetch(image);
-      const blob = await response.blob();
-      const storageRef = ref(storage, `images/${Date.now()}.jpg`);
-      await uploadBytes(storageRef, blob);
+      const arrayBuffer = await response.arrayBuffer();
+      const fileName = `${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(fileName, arrayBuffer, { contentType: 'image/jpeg' });
 
-      const user = auth.currentUser;
+      if (uploadError) {
+        Alert.alert('Upload failed', uploadError.message);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(fileName);
+      const { data: { user } } = await supabase.auth.getUser();
 
       const postData = {
-        author: user?.displayName,
+        user_id: user!.id,
+        author: getDisplayName(user),
         item: itemValue,
         address: addressValue,
         description: descriptionValue,
-        time: Timestamp.fromDate(new Date()),
+        time: new Date().toISOString(),
         type: selected,
-        imageURL: await getDownloadURL(storageRef),
-        coordinates: new GeoPoint(latValue, longValue),
-        expDate: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days from now
+        image_url: publicUrl,
+        latitude: latValue,
+        longitude: longValue,
+        exp_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       };
 
-      // Add to main posts collection
-      await addDoc(collection(db, "posts"), postData);
-
-      // Add to user's ownPosts subcollection
-      if (auth.currentUser?.uid) {
-        await addDoc(collection(db, "users", auth.currentUser.uid, "ownPosts"), postData);
+      const { error } = await supabase.from('posts').insert(postData);
+      if (error) {
+        Alert.alert('Post failed', error.message);
+        return;
       }
 
       onBack();

@@ -1,21 +1,11 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MultiSelect } from 'react-native-element-dropdown';
 import { Appbar } from 'react-native-paper';
-import { db } from '../Firebaseconfig';
 import Post from '../components/post';
-
-interface PostData {
-  id: string;
-  author: string;
-  description: string;
-  imageURL: string;
-  item: string;
-  time: any;
-  address: string;
-}
+import { formatPostTime, mapPost, type AppPost } from '../lib/posts';
+import { supabase } from '../Supabaseconfig';
 
 type HomeScreenProps = {
   onAddPost: () => void;
@@ -38,30 +28,22 @@ const COLORS = {
 };
 
 export default function HomeScreen({ onAddPost }: HomeScreenProps) {
-  const [posts, setPosts] = React.useState<PostData[]>([]);
+  const [posts, setPosts] = React.useState<AppPost[]>([]);
   const [refreshing, setRefreshing] = React.useState(false);
   const [selected, setSelected] = useState<string[]>([]);
 
   const fetchPosts = async () => {
     setRefreshing(true);
 
-    let q;
+    let query = supabase.from('posts').select('*').order('time', { ascending: false });
     if (selected.length > 0) {
-      q = query(
-        collection(db, 'posts'),
-        where('type', 'array-contains-any', selected),
-        orderBy('time', 'desc')
-      );
-    } else {
-      q = query(collection(db, 'posts'), orderBy('time', 'desc'));
+      query = query.in('type', selected);
     }
 
-    const snapshot = await getDocs(q);
-    const fetched = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data() as Omit<PostData, 'id'>
-    }));
-    setPosts(fetched);
+    const { data, error } = await query;
+    if (!error && data) {
+      setPosts(data.map(mapPost));
+    }
     setRefreshing(false);
   };
 
@@ -120,7 +102,8 @@ export default function HomeScreen({ onAddPost }: HomeScreenProps) {
         renderItem={({ item }) => (
           <Post
             author={item.author}
-            time={item.time?.toDate().toLocaleString() ?? ''}
+            userId={item.user_id}
+            time={formatPostTime(item.time)}
             item={item.item}
             description={item.description}
             address={item.address}

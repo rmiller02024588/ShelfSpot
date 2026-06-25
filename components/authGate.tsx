@@ -1,9 +1,9 @@
 import FollowingScreen from "@/app/followingScreen";
-import { onAuthStateChanged, User } from "firebase/auth";
+import type { User } from "@supabase/supabase-js";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { BottomNavigation, PaperProvider } from "react-native-paper";
-import { auth } from "../Firebaseconfig";
+import { onAuthStateChanged } from "../lib/auth";
 import HomeScreen from "../app/index";
 import LoginScreen from "../app/loginScreen";
 import MapScreen from "../app/mapScreen";
@@ -25,9 +25,8 @@ export default function AuthGate() {
   const [showPostScreen, setShowPostScreen] = useState(false);
   const [showSettingsScreen, setShowSettingsScreen] = useState(false);
   const [showFollowingScreen, setShowFollowingScreen] = useState(false);
-  const [viewingUserEmail, setViewingUserEmail] = useState<string | null>(null);
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
 
-  // adding this to check for a previous user
   const prevUidRef = useRef<string | null | undefined>(undefined);
 
   const [routes] = useState([
@@ -38,10 +37,9 @@ export default function AuthGate() {
   ]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      const incomingUid = firebaseUser?.uid ?? null;
+    const unsubscribe = onAuthStateChanged((authUser) => {
+      const incomingUid = authUser?.id ?? null;
 
-      // A new user session just started (login or signup)
       if (incomingUid !== prevUidRef.current) {
         setIndex(0);
         setShowPostScreen(false);
@@ -51,7 +49,7 @@ export default function AuthGate() {
       }
 
       prevUidRef.current = incomingUid;
-      setUser(firebaseUser);
+      setUser(authUser);
       setLoading(false);
     });
     return unsubscribe;
@@ -82,9 +80,9 @@ export default function AuthGate() {
   if (showFollowingScreen) {
     return (
       <ProfileNavContext.Provider value={{
-        onViewProfile: (email) => {
+        onViewProfile: (userId) => {
           setShowFollowingScreen(false);
-          setViewingUserEmail(email);
+          setViewingUserId(userId);
         }
       }}>
         <FollowingScreen onBack={() => setShowFollowingScreen(false)} />
@@ -92,8 +90,8 @@ export default function AuthGate() {
     );
   }
 
-  if (viewingUserEmail) {
-    return <ViewUserProfileScreen userEmail={viewingUserEmail} onBack={() => setViewingUserEmail(null)} />;
+  if (viewingUserId) {
+    return <ViewUserProfileScreen userId={viewingUserId} onBack={() => setViewingUserId(null)} />;
   }
 
   const renderScene = BottomNavigation.SceneMap({
@@ -105,7 +103,7 @@ export default function AuthGate() {
   });
 
   return (
-    <ProfileNavContext.Provider value={{ onViewProfile: setViewingUserEmail }}>
+    <ProfileNavContext.Provider value={{ onViewProfile: setViewingUserId }}>
       <PaperProvider>
         <BottomNavigation
           navigationState={{ index, routes }}

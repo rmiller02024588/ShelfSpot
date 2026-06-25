@@ -2,7 +2,7 @@ import { render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import SearchScreen from '../app/searchScreen';
 
-jest.mock('../Firebaseconfig', () => ({
+jest.mock('../Supabaseconfig', () => ({
   auth: { currentUser: null },
   db: {},
 }));

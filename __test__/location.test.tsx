@@ -38,6 +38,49 @@ jest.mock('expo-location', () => ({
   }])
 }));
 
+jest.mock('../lib/auth', () => ({
+  onAuthStateChanged: jest.fn((callback) => {
+    callback({ id: 'test-uid', email: 'test@example.com' });
+    return jest.fn();
+  }),
+}));
+
+jest.mock('../Supabaseconfig', () => {
+  const mockChannel = { on: jest.fn().mockReturnThis(), subscribe: jest.fn() };
+  const mockPost = {
+    id: '1',
+    user_id: 'test-uid',
+    author: 'test',
+    item: 'Pepsi',
+    description: 'Two left',
+    address: '123 Main St',
+    image_url: '',
+    time: '2026-01-01T00:00:00.000Z',
+    type: '1',
+    latitude: 42.6500221,
+    longitude: -71.3241605,
+    exp_date: '2026-02-01T00:00:00.000Z',
+  };
+  const createQuery = (data: unknown[] = []) => {
+    const result = Promise.resolve({ data, error: null });
+    const query: Record<string, jest.Mock> = {};
+    const chain = () => query;
+    query.select = jest.fn(chain);
+    query.eq = jest.fn(chain);
+    query.then = jest.fn((resolve, reject) => result.then(resolve, reject));
+    query.catch = jest.fn((reject) => result.catch(reject));
+    return query;
+  };
+
+  return {
+    supabase: {
+      from: jest.fn(() => createQuery([mockPost])),
+      channel: jest.fn(() => mockChannel),
+      removeChannel: jest.fn(),
+    },
+  };
+});
+
 const MapScreen = require('../app/mapScreen').default;
 const getUserLocation = require('../app/mapScreen').getUserLocation;
 

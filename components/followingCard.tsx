@@ -3,7 +3,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useProfileNav } from '../context/ProfileNavContext';
 
 type FollowingCardProps = {
-    username: string;
+    userId: string;
+    displayName: string;
 };
 
 const COLORS = {
@@ -14,11 +15,11 @@ const COLORS = {
     border: '#E8DDD4',
 };
 
-export default function FollowingCard({ username }: FollowingCardProps) {
+export default function FollowingCard({ userId, displayName }: FollowingCardProps) {
     const { onViewProfile } = useProfileNav();
 
-    const initials = username
-        ? username
+    const initials = displayName
+        ? displayName
             .split(' ')
             .map(w => w[0])
             .join('')
@@ -29,14 +30,14 @@ export default function FollowingCard({ username }: FollowingCardProps) {
     return (
         <TouchableOpacity
             style={styles.card}
-            onPress={() => onViewProfile(username)}
+            onPress={() => onViewProfile(userId)}
             activeOpacity={0.7}
         >
             <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initials}</Text>
             </View>
 
-            <Text style={styles.username}>{username}</Text>
+            <Text style={styles.username}>{displayName}</Text>
         </TouchableOpacity>
     );
 }

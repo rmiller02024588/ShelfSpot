@@ -1,15 +1,15 @@
 import * as Location from 'expo-location';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, onSnapshot } from 'firebase/firestore';
+import type { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-//import MapView from 'react-native-map-clustering';
 import MapView, { Circle, Marker } from 'react-native-maps';
 import StoreMarker from '../components/storeMarker';
-import { auth, db } from '../Firebaseconfig';
+import { onAuthStateChanged } from '../lib/auth';
+import { mapPost, type AppPost } from '../lib/posts';
+import { supabase } from '../Supabaseconfig';
 
 
-type Post = any;
+type Post = AppPost;
 const defaultAddress: Location.LocationGeocodedAddress = {
     street: '220 pawtucket st',
     city: 'lowell',
@@ -29,14 +29,12 @@ const defaultLongitude: number = -71.3241605;
 const locationRange: number = 20 * 1609.34; // 32187.5; // 20 miles in meters
 
 export async function getUserLocation(): Promise<[number | null, number | null, Location.LocationGeocodedAddress | null]> {
-    // Request permission to access a users location
     const {status} = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
         console.log('Permission to access location was denied');
         return [defaultLatitude, defaultLongitude, defaultAddress];
     }
 
-    // Get the users current location
     let local = await Location.getCurrentPositionAsync({});
     const {latitude, longitude} = local.coords;
 
@@ -46,23 +44,6 @@ export async function getUserLocation(): Promise<[number | null, number | null, 
     }
     return [latitude, longitude, null];
 }
-
-function createRange() {
-
-}
-
-function getPosts() {
-
-}
-
-function getPostinRange() {
-
-}
-
-function buildMarkers() {
-
-}
-
 
 function groupPostsByStore(posts: Post[]) {
     const map: Record<string, {posts: Post[], coordinates: any}> = {};
@@ -86,26 +67,31 @@ function groupPostsByStore(posts: Post[]) {
 
 
 export default function MapScreen() {
-    const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [selectedStore, setSelectedStore] = useState<any | null>(null);
-    const [posts, setPosts] = useState<any[]>([]);
+    const [posts, setPosts] = useState<AppPost[]>([]);
 
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+        const unsubscribe = onAuthStateChanged((u) => setCurrentUser(u));
         return unsubscribe;
     }, []);
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'posts'), (snapshot) => {
-            const fetched = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-        setPosts(fetched);
-        });
-    return unsubscribe; 
-    }  , []);
+        const fetchPosts = async () => {
+            const { data } = await supabase.from('posts').select('*');
+            if (data) setPosts(data.map(mapPost));
+        };
+
+        fetchPosts();
+
+        const channel = supabase
+            .channel('map-posts')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => fetchPosts())
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, []);
 
 
     const [location, setLocation] = useState<[number, number]>([defaultLatitude, defaultLongitude]);
@@ -122,7 +108,7 @@ export default function MapScreen() {
         fetchLocation();
     }, []);
 
-    posts.sort((a, b) => b.time.seconds - a.time.seconds)
+    posts.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
     const groupedStores = groupPostsByStore(posts);
 
 
@@ -194,21 +180,6 @@ export default function MapScreen() {
     </View>
   );
 }
-
-/*{posts.map((m) => (
-            <Marker
-                key={m.id}
-                coordinate={{
-                    latitude: m.coordinates.latitude,
-                    longitude: m.coordinates.longitude
-                }}
-                title={m.item}
-                description={m.description}
-            >
-                <StoreMarker />
-          </Marker>
-        ))}
-*/
 
 const styles = StyleSheet.create({
   container: {

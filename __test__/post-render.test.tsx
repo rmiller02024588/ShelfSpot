@@ -1,52 +1,30 @@
 import { render } from '@testing-library/react-native';
 import React from 'react';
 
-
-jest.mock('../Firebaseconfig', () => ({
-  auth: { currentUser: { uid: 'test-uid', email: 'test@example.com' } },
-  db: {},
+jest.mock('../lib/auth', () => ({
+  getCurrentUser: jest.fn(() => Promise.resolve(null)),
 }));
 
-jest.mock('firebase/auth', () => ({
-  getReactNativePersistence: jest.fn(),
-  initializeAuth: jest.fn(),
-  onAuthStateChanged: jest.fn(),
-  getAuth: jest.fn(() => ({
-    currentUser: { uid: 'test-uid', email: 'test@example.com' },
-  })),
-}));
-
-jest.mock('firebase/app', () => ({
-  initializeApp: jest.fn(),
-}));
-
-jest.mock('firebase/firestore', () => ({
-  getFirestore: jest.fn(),
-  collection: jest.fn(),
-  doc: jest.fn(),
-  getDoc: jest.fn(),
-  onSnapshot: jest.fn(() => jest.fn()),
-}));
-
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  default: {},
+jest.mock('../Supabaseconfig', () => ({
+  supabase: {
+    from: jest.fn(() => ({
+      select: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      maybeSingle: jest.fn(() => Promise.resolve({ data: null })),
+    })),
+    channel: jest.fn(() => ({ on: jest.fn().mockReturnThis(), subscribe: jest.fn() })),
+    removeChannel: jest.fn(),
+  },
 }));
 
 import Post from '../components/post';
-
-jest.mock('../Firebaseconfig', () => ({
-  auth: {
-    currentUser: null,
-    onAuthStateChanged: jest.fn(),
-  },
-  db: {},
-}));
 
 test('renders post with title and content', () => {
   const { getByText } = render(
     <Post
       postId='1234'
       author="John Doe"
+      userId="user-uuid-1234"
       item="Test Item"
       description="Test content"
       address="123 Main St"

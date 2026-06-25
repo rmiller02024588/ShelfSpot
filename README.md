@@ -10,7 +10,7 @@ Users can post sightings of niche and limited-time items; each post includes the
 ## Tech Stack
 
 - React Native 0.81.5 + Expo 54
-- Firebase v12 (Auth + Firestore)
+- Supabase (Auth + PostgreSQL + Storage)
 - React Native Paper (UI)
 - React Native Maps
 - Google Maps API
@@ -46,8 +46,18 @@ There are 3 ways to run ShelfSpot. Install the prerequisites for whichever you p
 git clone https://github.com/rmiller02024588/ShelfSpot.git
 cd ShelfSpot
 npm install
+cp .env.example .env
 ```
 IMPORTANT: In order to access map feature you need to aquire a google maps api key and place it in a .env folder before running app, we can not provide this for every user individually for security purposes.
+
+Fill in `.env` with your Google Maps API key and Supabase credentials (`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` from your [Supabase project settings](https://supabase.com/dashboard)).
+
+### Supabase setup
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In the SQL editor, run the schema in `supabase/schema.sql`.
+3. Under **Authentication → Providers**, enable Email sign-in.
+4. Copy your project URL and anon key into `.env`.
 
 ## Running the App
 
@@ -73,8 +83,10 @@ This project uses GitHub Actions for continuous integration. Every push and pull
 ShelfSpot/
 ├── app/              # Screens (Bottom nav react-native paper)
 ├── components/       # Shared components (AuthGate, etc.)
+├── lib/              # Auth helpers and post utilities
+├── supabase/         # Database schema SQL
+├── Supabaseconfig.ts # Supabase client initialization
 ├── __test__/         # Unit tests
-├── Firebaseconfig.ts # Firebase initialization
 └── .github/          # CI workflows
 ```
 

@@ -1,13 +1,13 @@
-import { db } from '@/Firebaseconfig';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { getAuth } from 'firebase/auth';
-import { deleteDoc, doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useProfileNav } from '../context/ProfileNavContext';
+import { getCurrentUser } from '../lib/auth';
+import { supabase } from '../Supabaseconfig';
 
 type PostCardProps = {
   author: string;
+  userId: string;
   item: string;
   description: string;
   address: string;
@@ -27,39 +27,63 @@ const COLORS = {
   inputBg: '#FDF9F5',
 };
 
-export default function PostCard({ author, item, description, address, image, time, postId }: PostCardProps) {
+export default function PostCard({ author, userId, item, description, address, image, time, postId }: PostCardProps) {
   const [saved, setSaved] = useState(false);
   const { onViewProfile } = useProfileNav();
 
   useEffect(() => {
-    const user = getAuth().currentUser;
-    if (!user) return;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-    const ref = doc(db, 'users', user.uid, 'savedPosts', postId);
+    const setup = async () => {
+      const user = await getCurrentUser();
+      if (!user) return;
 
-    const unsubscribe = onSnapshot(ref, (docSnap) => {
-      setSaved(docSnap.exists());
-    });
+      const checkSaved = async () => {
+        const { data } = await supabase
+          .from('saved_posts')
+          .select('post_id')
+          .eq('user_id', user.id)
+          .eq('post_id', postId)
+          .maybeSingle();
+        setSaved(!!data);
+      };
 
-    return unsubscribe;
-  }, [postId, getAuth().currentUser?.uid]);
+      await checkSaved();
+
+      channel = supabase
+        .channel(`saved-post-${user.id}-${postId}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'saved_posts',
+          filter: `user_id=eq.${user.id}`,
+        }, () => checkSaved())
+        .subscribe();
+    };
+
+    setup();
+    return () => { if (channel) supabase.removeChannel(channel); };
+  }, [postId]);
 
   const handleSavePress = async () => {
-    const user = getAuth().currentUser;
+    const user = await getCurrentUser();
     if (!user) return;
     const newSavedState = !saved;
     setSaved(newSavedState);
     try {
       if (newSavedState) {
-        await savePost(postId);
+        await savePost(user.id, postId);
       } else {
-        await unsavePost(postId);
+        await unsavePost(user.id, postId);
       }
 
-      const docSnap = await getDoc(
-        doc(db, 'users', user.uid, 'savedPosts', postId)
-      );
-      setSaved(docSnap.exists());
+      const { data } = await supabase
+        .from('saved_posts')
+        .select('post_id')
+        .eq('user_id', user.id)
+        .eq('post_id', postId)
+        .maybeSingle();
+      setSaved(!!data);
 
     } catch (err) {
       setSaved(!newSavedState);
@@ -78,7 +102,6 @@ export default function PostCard({ author, item, description, address, image, ti
 
   return (
     <View style={styles.card}>
-      {/* Image */}
       {image ? (
         <Image source={{ uri: image }} style={styles.image} />
       ) : (
@@ -88,11 +111,10 @@ export default function PostCard({ author, item, description, address, image, ti
       )}
 
       <View style={styles.body}>
-        {/* Author row */}
         <View style={styles.authorRow}>
           <TouchableOpacity
             style={styles.authorPressable}
-            onPress={() => onViewProfile(author)}
+            onPress={() => onViewProfile(userId)}
             activeOpacity={0.6}
           >
             <View style={styles.avatar}>
@@ -116,15 +138,12 @@ export default function PostCard({ author, item, description, address, image, ti
           </TouchableOpacity>
         </View>
 
-        {/* Item name */}
         <Text style={styles.itemName}>{item}</Text>
 
-        {/* Description */}
         {description ? (
           <Text style={styles.description} numberOfLines={2}>{description}</Text>
         ) : null}
 
-        {/* Location */}
         {address ? (
           <View style={styles.locationRow}>
             <AntDesign name="pushpin" size={12} color={COLORS.textSecondary} />
@@ -137,22 +156,12 @@ export default function PostCard({ author, item, description, address, image, ti
 }
 
 
-const savePost = async (postId: string) => {
-  const user = getAuth().currentUser;
-  if (!user) return;
-
-  await setDoc(
-    doc(db, "users", user.uid, "savedPosts", postId),
-    {
-    }
-  );
+const savePost = async (userId: string, postId: string) => {
+  await supabase.from('saved_posts').insert({ user_id: userId, post_id: postId });
 };
 
-const unsavePost = async (postId: string) => {
-  const user = getAuth().currentUser;
-  if (!user) return;
-
-  await deleteDoc(doc(db, "users", user.uid, "savedPosts", postId));
+const unsavePost = async (userId: string, postId: string) => {
+  await supabase.from('saved_posts').delete().eq('user_id', userId).eq('post_id', postId);
 };
 
 const styles = StyleSheet.create({

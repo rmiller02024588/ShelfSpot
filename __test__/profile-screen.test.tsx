@@ -2,54 +2,55 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import ProfileScreen from '../app/profileScreen';
 
-jest.mock('../Firebaseconfig', () => ({
-  auth: { currentUser: { uid: 'test-uid', email: 'test@example.com', displayName: 'test' } },
-  db: {},
-}));
+const mockPost = {
+  id: '1',
+  user_id: 'test-uid',
+  author: 'test',
+  item: 'Pepsi',
+  description: 'Two left',
+  address: '123 Main St',
+  image_url: '',
+  time: '2026-01-01T00:00:00.000Z',
+  type: '1',
+  latitude: 0,
+  longitude: 0,
+  exp_date: '2026-02-01T00:00:00.000Z',
+};
 
-jest.mock('firebase/auth', () => ({
-  onAuthStateChanged: jest.fn((auth, callback) => {
-    callback({ uid: 'test-uid', email: 'test@example.com', displayName: 'test' });
+jest.mock('../lib/auth', () => ({
+  onAuthStateChanged: jest.fn((callback) => {
+    callback({ id: 'test-uid', email: 'test@example.com', user_metadata: { display_name: 'test' } });
     return jest.fn();
   }),
+  getDisplayName: jest.fn(() => 'test'),
 }));
 
-jest.mock('firebase/firestore', () => {
-  const mockOwnPost = {
-    id: '1',
-    data: () => ({
-      author: 'test@example.com',
-      item: 'Pepsi',
-      description: 'Two left',
-      address: '123 Main St',
-      imageURL: '',
-      time: { toDate: () => new Date('2026-01-01') },
-    }),
-  };
-
-  const mockSavedPost = {
-    id: 'saved-1',
-    data: () => ({
-      author: 'test@example.com',
-      item: 'Saved Item',
-      description: 'Saved description',
-      address: '456 Save St',
-      imageURL: '',
-      time: { toDate: () => new Date('2026-01-01') },
-    }),
+jest.mock('../Supabaseconfig', () => {
+  const mockChannel = { on: jest.fn().mockReturnThis(), subscribe: jest.fn() };
+  const createQuery = (data: unknown[] = [], count = 0) => {
+    const result = Promise.resolve({ data, error: null, count });
+    const query: Record<string, jest.Mock> = {};
+    const chain = () => query;
+    query.select = jest.fn(chain);
+    query.eq = jest.fn(chain);
+    query.in = jest.fn(chain);
+    query.order = jest.fn(chain);
+    query.then = jest.fn((resolve, reject) => result.then(resolve, reject));
+    query.catch = jest.fn((reject) => result.catch(reject));
+    return query;
   };
 
   return {
-    collection: jest.fn(() => 'mock-collection'),
-    doc: jest.fn(() => 'mock-doc-ref'),
-    getDoc: jest.fn(() => Promise.resolve(mockSavedPost)),
-    onSnapshot: jest.fn((query, callback) => {
-      callback({ docs: [mockOwnPost] });
-      return jest.fn();
-    }),
-    getCountFromServer: jest.fn(() =>
-      Promise.resolve({ data: () => ({ count: 0 }) })
-    ),
+    supabase: {
+      from: jest.fn((table: string) => {
+        if (table === 'posts') return createQuery([mockPost]);
+        if (table === 'saved_posts') return createQuery([]);
+        if (table === 'following') return createQuery([], 0);
+        return createQuery();
+      }),
+      channel: jest.fn(() => mockChannel),
+      removeChannel: jest.fn(),
+    },
   };
 });
 

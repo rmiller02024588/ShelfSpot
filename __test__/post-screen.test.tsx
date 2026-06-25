@@ -1,19 +1,31 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { addDoc } from 'firebase/firestore';
 import React from 'react';
 import { Alert } from 'react-native';
 import PostScreen from '../app/postScreen';
 
-jest.mock('../Firebaseconfig', () => ({
-  auth: { currentUser: { email: 'test@example.com' } },
-  db: {},
+const mockInsert = jest.fn(() => Promise.resolve({ error: null }));
+
+jest.mock('../Supabaseconfig', () => ({
+  supabase: {
+    auth: {
+      getUser: jest.fn(() => Promise.resolve({
+        data: { user: { id: 'test-uid', email: 'test@example.com', user_metadata: { display_name: 'test' } } },
+      })),
+    },
+    storage: {
+      from: jest.fn(() => ({
+        upload: jest.fn(() => Promise.resolve({ error: null })),
+        getPublicUrl: jest.fn(() => ({ data: { publicUrl: 'https://example.com/img.jpg' } })),
+      })),
+    },
+    from: jest.fn(() => ({
+      insert: mockInsert,
+    })),
+  },
 }));
 
-jest.mock('firebase/firestore', () => ({
-  addDoc: jest.fn(() => Promise.resolve()),
-  collection: jest.fn(),
-  GeoPoint: jest.fn(),
-  Timestamp: { fromDate: jest.fn() },
+jest.mock('../lib/auth', () => ({
+  getDisplayName: jest.fn(() => 'test'),
 }));
 
 jest.mock('expo-image-picker', () => ({
@@ -93,10 +105,10 @@ test('shows alert when posting with empty fields', async () => {
   });
 });
 
-test('does not call addDoc when fields are missing', async () => {
+test('does not insert post when fields are missing', async () => {
   const { getByText } = render(<PostScreen onBack={() => {}} />);
   fireEvent.press(getByText('Post'));
   await waitFor(() => {
-    expect(addDoc).not.toHaveBeenCalled();
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 });

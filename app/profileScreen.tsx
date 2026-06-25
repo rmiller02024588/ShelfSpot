@@ -1,11 +1,12 @@
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, doc, getCountFromServer, getDoc, onSnapshot } from 'firebase/firestore';
+import type { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Post from '../components/post';
-import { auth, db } from '../Firebaseconfig';
+import { getDisplayName, onAuthStateChanged } from '../lib/auth';
+import { formatPostTime, mapPost, type AppPost } from '../lib/posts';
+import { supabase } from '../Supabaseconfig';
 
 const COLORS = {
   background:    '#FAF7F2',
@@ -70,64 +71,99 @@ type ProfileScreenProps = { onGoToSettings?: () => void
 
 export default function ProfileScreen({ onGoToSettings, onGoToFollowing }: ProfileScreenProps) {
   const [tab, setTab] = useState<'posts' | 'saves'>('posts');
-  const [posts, setPosts] = useState<any[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
-  const [savedPosts, setSavedPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<AppPost[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [savedPosts, setSavedPosts] = useState<AppPost[]>([]);
   const [followingCount, setFollowingCount] = useState<number>(0);
   const data = tab === 'posts' ? posts : savedPosts;
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+    const unsubscribe = onAuthStateChanged((u) => setCurrentUser(u));
     return unsubscribe;
   }, []);
 
-  // Fetch user's own posts from ownPosts subcollection
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.id) return;
 
-    const q = collection(db, 'users', currentUser.uid, 'ownPosts');
+    const fetchOwnPosts = async () => {
+      const { data: rows } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', currentUser.id);
+      if (rows) setPosts(rows.map(mapPost));
+    };
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setPosts(fetched);
-    });
+    fetchOwnPosts();
 
-    return unsubscribe;
-  }, [currentUser?.uid]);
+    const channel = supabase
+      .channel(`own-posts-${currentUser.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'posts',
+        filter: `user_id=eq.${currentUser.id}`,
+      }, () => fetchOwnPosts())
+      .subscribe();
 
-  // Fetch user's saved posts
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-
-    const q = collection(db, 'users', currentUser.uid, 'savedPosts');
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const fetched = await Promise.all(
-        snapshot.docs.map(async (savedDoc) => {
-          const postDoc = await getDoc(doc(db, 'posts', savedDoc.id));
-          return { id: postDoc.id, ...postDoc.data() };
-        })
-      );
-
-      setSavedPosts(fetched);
-    });
-
-    return unsubscribe;
-  }, [currentUser?.uid]);
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUser?.id]);
 
   useEffect(() => {
-    if (!currentUser?.uid) {
+    if (!currentUser?.id) return;
+
+    const fetchSavedPosts = async () => {
+      const { data: saved } = await supabase
+        .from('saved_posts')
+        .select('post_id')
+        .eq('user_id', currentUser.id);
+
+      const postIds = (saved ?? []).map(s => s.post_id);
+      if (postIds.length === 0) {
+        setSavedPosts([]);
+        return;
+      }
+
+      const { data: rows } = await supabase.from('posts').select('*').in('id', postIds);
+      if (rows) setSavedPosts(rows.map(mapPost));
+    };
+
+    fetchSavedPosts();
+
+    const channel = supabase
+      .channel(`saved-posts-${currentUser.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'saved_posts',
+        filter: `user_id=eq.${currentUser.id}`,
+      }, () => fetchSavedPosts())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser?.id) {
       setFollowingCount(0);
       return;
     }
 
-    getCountFromServer(collection(db, 'users', currentUser.uid, 'following'))
-      .then((snap) => setFollowingCount(snap.data().count))
-      .catch(() => setFollowingCount(0));
-  }, [currentUser?.uid]);
+    const fetchFollowingCount = async () => {
+      try {
+        const { count } = await supabase
+          .from('following')
+          .select('*', { count: 'exact', head: true })
+          .eq('follower_id', currentUser.id);
+        setFollowingCount(count ?? 0);
+      } catch {
+        setFollowingCount(0);
+      }
+    };
 
-  const username = currentUser?.displayName
-  || currentUser?.email?.split('@')[0]
-  || 'Unknown';
+    fetchFollowingCount();
+  }, [currentUser?.id]);
+
+  const username = getDisplayName(currentUser);
   const initials = username.slice(0, 2).toUpperCase();
   const insets = useSafeAreaInsets();
 
@@ -151,27 +187,16 @@ export default function ProfileScreen({ onGoToSettings, onGoToFollowing }: Profi
       }
       contentContainerStyle={[styles.listContent, { paddingTop: insets.top }]}
       renderItem={({ item }) => (
-        tab === 'posts' ? (
-          <Post
-            author={item.author ?? 'Unknown'}
-            time={item.time?.toDate().toLocaleString() ?? ''}
-            item={item.item}
-            description={item.description}
-            address={item.address}
-            image={item.imageURL}
-            postId={item.id}
-          />
-        ) : (
-          <Post
-            author={item.author ?? 'Unknown'}
-            time={item.time?.toDate().toLocaleString() ?? ''}
-            item={item.item}
-            description={item.description}
-            address={item.address}
-            image={item.imageURL}
-            postId={item.id}
-          />
-        )
+        <Post
+          author={item.author ?? 'Unknown'}
+          userId={item.user_id}
+          time={formatPostTime(item.time)}
+          item={item.item}
+          description={item.description}
+          address={item.address}
+          image={item.imageURL}
+          postId={item.id}
+        />
       )}
     />
   );

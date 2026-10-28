@@ -1,8 +1,9 @@
-import { onAuthStateChanged, signOut, updateProfile, User } from 'firebase/auth';
+import type { User } from '@supabase/supabase-js';
 import { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Appbar, Avatar } from 'react-native-paper';
-import { auth } from '../Firebaseconfig';
+import { getDisplayName, onAuthStateChanged } from '../lib/auth';
+import { supabase } from '../Supabaseconfig';
 
 const COLORS = {
   background:    '#FAF7F2',
@@ -22,11 +23,11 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
   const [tempValue, setTempValue] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged((user) => {
       setCurrentUser(user);
       if (user) {
         setProfile({
-          name:  user.displayName || '',
+          name:  getDisplayName(user),
           email: user.email || '',
         });
       }
@@ -35,7 +36,6 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
   }, []);
 
   const startEdit = (field: string) => {
-    // Email is managed by Firebase Auth and requires re-auth to change — make it read-only
     if (field === 'email') {
       Alert.alert('Email', 'To change your email, please contact support.');
       return;
@@ -51,7 +51,10 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
     }
     try {
       if (editingField === 'name') {
-        await updateProfile(currentUser, { displayName: tempValue.trim() });
+        const { error } = await supabase.auth.updateUser({
+          data: { display_name: tempValue.trim() },
+        });
+        if (error) throw error;
       }
       setProfile(prev => ({ ...prev, [editingField!]: tempValue.trim() }));
       Alert.alert('Success', 'Profile updated successfully');
@@ -64,11 +67,10 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
 
   const cancel = () => setEditingField(null);
 
-  // Moved inside component so it can call onBack after logout
   const handleLogout = async () => {
     try {
-      await signOut(auth);
-      onBack?.(); // Return to auth screen — AuthGate will handle showing login
+      await supabase.auth.signOut();
+      onBack?.();
     } catch (error) {
       console.error('Logout error:', error);
       Alert.alert('Error', 'Failed to log out');

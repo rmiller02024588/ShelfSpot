@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
 type ProfileNavContextType = {
-  onViewProfile: (email: string) => void;
+  onViewProfile: (userId: string) => void;
 };
 
 export const ProfileNavContext = createContext<ProfileNavContextType>({

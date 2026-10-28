@@ -2,14 +2,12 @@ module.exports = {
   preset: 'jest-expo',
   testEnvironment: 'node',
   transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|firebase|@firebase)',
+    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@supabase)',
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^firebase/auth$': '<rootDir>/__mocks__/firebase/auth.js',
-    '^firebase/app$': '<rootDir>/__mocks__/firebase/app.js',
-    '^firebase/firestore$': '<rootDir>/__mocks__/firebase/firestore.js',
-    '^firebase/storage$': '<rootDir>/__mocks__/firebase/storage.js',
+    '^../Supabaseconfig$': '<rootDir>/__mocks__/Supabaseconfig.js',
+    '^@/Supabaseconfig$': '<rootDir>/__mocks__/Supabaseconfig.js',
     '^react-native-map-clustering$': '<rootDir>/__mocks__/react-native-map-clustering.js',
     '^react-native-maps$': '<rootDir>/__mocks__/react-native-maps.js',
     '^@react-native-async-storage/async-storage$': '<rootDir>/__mocks__/async-storage.js',

@@ -1,7 +1,6 @@
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { auth } from "../Firebaseconfig";
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { supabase } from "../Supabaseconfig";
 
 const COLORS = {
   background:    '#FAF7F2',
@@ -18,26 +17,38 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [displayName, setDisplayName] = useState<string>("");
+  const [loading, setLoading] = useState(false);
 
   const makeAccount = async () => {
+    if (loading) return;
+    if (!email.trim() || !password || !displayName.trim()) {
+      Alert.alert('Missing fields', 'Please enter an email, password, and display name.');
+      return;
+    }
+    setLoading(true);
     try {
-      createUserWithEmailAndPassword(auth, email, password);
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { display_name: displayName.trim() },
+        },
+      });
+      if (error) {
+        Alert.alert('Sign up failed', error.message);
+        return;
+      }
+      if (!data.session) {
+        Alert.alert(
+          'Check your email',
+          'Account created. Confirm your email, then log in.',
+        );
+      }
     } catch (error) {
-      console.log(error);
+      Alert.alert('Sign up failed', error instanceof Error ? error.message : 'Unexpected error');
+    } finally {
+      setLoading(false);
     }
-
-    const user = auth.currentUser;
-    if (user && displayName.trim() !== '') {
-    try {
-      await updateProfile(user, { displayName });
-      console.log('Profile updated with display name:', displayName);
-    } catch (profileError) {
-      console.log('Error updating profile:', profileError);
-    }
-  }
-
-
-
   };
 
   return (

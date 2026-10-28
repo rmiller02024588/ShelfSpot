@@ -1,19 +1,31 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { addDoc } from 'firebase/firestore';
 import React from 'react';
 import { Alert } from 'react-native';
 import PostScreen from '../app/postScreen';
 
-jest.mock('../Firebaseconfig', () => ({
-  auth: { currentUser: { email: 'test@example.com' } },
-  db: {},
+const mockInsert = jest.fn(() => Promise.resolve({ error: null }));
+
+jest.mock('../Supabaseconfig', () => ({
+  supabase: {
+    auth: {
+      getUser: jest.fn(() => Promise.resolve({
+        data: { user: { id: 'test-uid', email: 'test@example.com', user_metadata: { display_name: 'test' } } },
+      })),
+    },
+    storage: {
+      from: jest.fn(() => ({
+        upload: jest.fn(() => Promise.resolve({ error: null })),
+        getPublicUrl: jest.fn(() => ({ data: { publicUrl: 'https://example.com/img.jpg' } })),
+      })),
+    },
+    from: jest.fn(() => ({
+      insert: mockInsert,
+    })),
+  },
 }));
 
-jest.mock('firebase/firestore', () => ({
-  addDoc: jest.fn(() => Promise.resolve()),
-  collection: jest.fn(),
-  GeoPoint: jest.fn(),
-  Timestamp: { fromDate: jest.fn() },
+jest.mock('../lib/auth', () => ({
+  getDisplayName: jest.fn(() => 'test'),
 }));
 
 jest.mock('expo-image-picker', () => ({
@@ -60,13 +72,13 @@ jest.mock('react-native-paper', () => {
 
 jest.mock('@expo/vector-icons/AntDesign', () => () => null);
 
-test('renders the New Post header', () => {
-  const { getByText } = render(<PostScreen onBack={() => {}} />);
+test('renders the New Post header', async () => {
+  const { getByText } = await render(<PostScreen onBack={() => {}} />);
   expect(getByText('New Post')).toBeTruthy();
 });
 
-test('renders all form section labels', () => {
-  const { getByText } = render(<PostScreen onBack={() => {}} />);
+test('renders all form section labels', async () => {
+  const { getByText } = await render(<PostScreen onBack={() => {}} />);
   expect(getByText('Item Name')).toBeTruthy();
   expect(getByText('Location')).toBeTruthy();
   expect(getByText('Category')).toBeTruthy();
@@ -74,16 +86,16 @@ test('renders all form section labels', () => {
   expect(getByText('Photo')).toBeTruthy();
 });
 
-test('calls onBack when back button is pressed', () => {
+test('calls onBack when back button is pressed', async () => {
   const onBack = jest.fn();
-  const { getByTestId } = render(<PostScreen onBack={onBack} />);
+  const { getByTestId } = await render(<PostScreen onBack={onBack} />);
   fireEvent.press(getByTestId('backButton'));
   expect(onBack).toHaveBeenCalledTimes(1);
 });
 
 test('shows alert when posting with empty fields', async () => {
   jest.spyOn(Alert, 'alert');
-  const { getByText } = render(<PostScreen onBack={() => {}} />);
+  const { getByText } = await render(<PostScreen onBack={() => {}} />);
   fireEvent.press(getByText('Post'));
   await waitFor(() => {
     expect(Alert.alert).toHaveBeenCalledWith(
@@ -93,10 +105,10 @@ test('shows alert when posting with empty fields', async () => {
   });
 });
 
-test('does not call addDoc when fields are missing', async () => {
-  const { getByText } = render(<PostScreen onBack={() => {}} />);
+test('does not insert post when fields are missing', async () => {
+  const { getByText } = await render(<PostScreen onBack={() => {}} />);
   fireEvent.press(getByText('Post'));
   await waitFor(() => {
-    expect(addDoc).not.toHaveBeenCalled();
+    expect(mockInsert).not.toHaveBeenCalled();
   });
 });

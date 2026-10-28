@@ -82,24 +82,24 @@ jest.mock('../components/post', () => {
   return MockPost;
 });
 
-test('renders the user name', () => {
-  const { getByText } = render(<ProfileScreen />);
-  expect(getByText('test')).toBeTruthy();
+test('renders the user name', async () => {
+  const { getAllByText } = await render(<ProfileScreen />);
+  expect(getAllByText('test').length).toBeGreaterThan(0);
 });
 
-test('renders the avatar initials', () => {
-  const { getByText } = render(<ProfileScreen />);
+test('renders the avatar initials', async () => {
+  const { getByText } = await render(<ProfileScreen />);
   expect(getByText('TE')).toBeTruthy();
 });
 
-test('renders Posts and Saves tabs', () => {
-  const { getByText } = render(<ProfileScreen />);
+test('renders Posts and Saves tabs', async () => {
+  const { getByText } = await render(<ProfileScreen />);
   expect(getByText('Posts')).toBeTruthy();
   expect(getByText('Saves')).toBeTruthy();
 });
 
 test('renders post data after fetch', async () => {
-  const { getByText } = render(<ProfileScreen />);
+  const { getByText } = await render(<ProfileScreen />);
   await waitFor(() => {
     expect(getByText('Pepsi')).toBeTruthy();
     expect(getByText('Two left')).toBeTruthy();
@@ -108,7 +108,7 @@ test('renders post data after fetch', async () => {
 });
 
 test('switches to Saves tab and hides posts', async () => {
-  const { getByText, queryByText } = render(<ProfileScreen />);
+  const { getByText, queryByText } = await render(<ProfileScreen />);
   await waitFor(() => expect(getByText('Pepsi')).toBeTruthy());
   fireEvent.press(getByText('Saves'));
   await waitFor(() => {

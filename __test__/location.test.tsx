@@ -4,7 +4,7 @@ import React from 'react';
 jest.mock('react-native-map-clustering', () => {
   const React = require('react');
   const { View } = require('react-native');
-  const MockMapClustering = ({ children, style, ...props }) =>
+  const MockMapClustering = ({ children, style, ...props }: any) =>
     React.createElement(View, { testID: 'map', style, ...props }, children);
 
   return {
@@ -16,9 +16,9 @@ jest.mock('react-native-map-clustering', () => {
 jest.mock('react-native-maps', () => {
   const React = require('react');
   const { View } = require('react-native');
-  const MockMap = ({ children, ...props }) => React.createElement(View, { testID: 'map', ...props }, children);
-  const Marker = ({ children }) => React.createElement(View, { testID: 'marker' }, children);
-  const Circle = ({ children }) => React.createElement(View, { testID: 'circle' }, children);
+  const MockMap = ({ children, ...props }: any) => React.createElement(View, { testID: 'map', ...props }, children);
+  const Marker = ({ children }: any) => React.createElement(View, { testID: 'marker' }, children);
+  const Circle = ({ children }: any) => React.createElement(View, { testID: 'circle' }, children);
 
   return {
     __esModule: true,
@@ -86,14 +86,14 @@ const getUserLocation = require('../app/mapScreen').getUserLocation;
 
 describe('MapScreen', () => {
   test('renders the map', async () => {
-    const { getByTestId } = render(<MapScreen />);
+    const { getByTestId } = await render(<MapScreen />);
     await waitFor(() => {
       expect(getByTestId('map')).toBeTruthy();
     });
   });
 
   test('renders at least one marker', async () => {
-    const { getAllByTestId } = render(<MapScreen />);
+    const { getAllByTestId } = await render(<MapScreen />);
     await waitFor(() => {
       const markers = getAllByTestId('marker');
       expect(markers.length).toBeGreaterThan(0);

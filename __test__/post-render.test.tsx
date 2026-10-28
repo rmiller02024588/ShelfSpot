@@ -19,8 +19,8 @@ jest.mock('../Supabaseconfig', () => ({
 
 import Post from '../components/post';
 
-test('renders post with title and content', () => {
-  const { getByText } = render(
+test('renders post with title and content', async () => {
+  const { getByText } = await render(
     <Post
       postId='1234'
       author="John Doe"

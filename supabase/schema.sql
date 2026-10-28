@@ -1,26 +1,36 @@
 -- Profiles table (publicly readable, auto-created on signup)
-create table if not exists profiles (
+create table if not exists public.profiles (
   id uuid primary key references auth.users on delete cascade,
   email text unique not null,
   display_name text
 );
 
-create or replace function handle_new_user()
-returns trigger as $$
+-- Must be SECURITY DEFINER with a pinned search_path so auth (supabase_auth_admin)
+-- can insert into public.profiles during signup. Unqualified names break when
+-- search_path is empty, which causes "Database error saving new user".
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
 begin
-  insert into profiles (id, email, display_name)
+  insert into public.profiles (id, email, display_name)
   values (new.id, new.email, new.raw_user_meta_data->>'display_name');
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
 
+drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute procedure handle_new_user();
+  for each row execute procedure public.handle_new_user();
 
-alter table profiles enable row level security;
-create policy "Profiles are viewable by everyone" on profiles for select using (true);
-create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
+alter table public.profiles enable row level security;
+drop policy if exists "Profiles are viewable by everyone" on public.profiles;
+drop policy if exists "Users can update own profile" on public.profiles;
+create policy "Profiles are viewable by everyone" on public.profiles for select using (true);
+create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
 
 -- Posts
 create table if not exists posts (
@@ -61,15 +71,25 @@ alter table posts enable row level security;
 alter table saved_posts enable row level security;
 alter table following enable row level security;
 
+drop policy if exists "Posts are viewable by everyone" on posts;
+drop policy if exists "Users can insert own posts" on posts;
+drop policy if exists "Users can update own posts" on posts;
+drop policy if exists "Users can delete own posts" on posts;
 create policy "Posts are viewable by everyone" on posts for select using (true);
 create policy "Users can insert own posts" on posts for insert with check (auth.uid() = user_id);
 create policy "Users can update own posts" on posts for update using (auth.uid() = user_id);
 create policy "Users can delete own posts" on posts for delete using (auth.uid() = user_id);
 
+drop policy if exists "Users can view own saves" on saved_posts;
+drop policy if exists "Users can insert own saves" on saved_posts;
+drop policy if exists "Users can delete own saves" on saved_posts;
 create policy "Users can view own saves" on saved_posts for select using (auth.uid() = user_id);
 create policy "Users can insert own saves" on saved_posts for insert with check (auth.uid() = user_id);
 create policy "Users can delete own saves" on saved_posts for delete using (auth.uid() = user_id);
 
+drop policy if exists "Users can view own following" on following;
+drop policy if exists "Users can insert own following" on following;
+drop policy if exists "Users can delete own following" on following;
 create policy "Users can view own following" on following for select using (auth.uid() = follower_id);
 create policy "Users can insert own following" on following for insert with check (auth.uid() = follower_id);
 create policy "Users can delete own following" on following for delete using (auth.uid() = follower_id);
@@ -79,6 +99,8 @@ insert into storage.buckets (id, name, public)
 values ('images', 'images', true)
 on conflict (id) do nothing;
 
+drop policy if exists "Images are publicly accessible" on storage.objects;
+drop policy if exists "Authenticated users can upload images" on storage.objects;
 create policy "Images are publicly accessible"
   on storage.objects for select using (bucket_id = 'images');
 
@@ -86,8 +108,20 @@ create policy "Authenticated users can upload images"
   on storage.objects for insert
   with check (bucket_id = 'images' and auth.role() = 'authenticated');
 
--- Realtime
-alter publication supabase_realtime add table posts;
-alter publication supabase_realtime add table saved_posts;
-alter publication supabase_realtime add table following;
-alter publication supabase_realtime add table profiles;
+-- Realtime (ignore if already added)
+do $$ begin
+  alter publication supabase_realtime add table posts;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table saved_posts;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table following;
+exception when duplicate_object then null;
+end $$;
+do $$ begin
+  alter publication supabase_realtime add table profiles;
+exception when duplicate_object then null;
+end $$;

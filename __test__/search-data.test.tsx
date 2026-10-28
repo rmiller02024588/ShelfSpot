@@ -22,6 +22,6 @@ jest.mock('../app/searchScreen', () => {
 
 
 test('displays fetched user data', async () => {
-  const { getByText } = render(<SearchScreen />);
+  const { getByText } = await render(<SearchScreen />);
   await waitFor(() => expect(getByText('Jane Doe')).toBeTruthy());
 });

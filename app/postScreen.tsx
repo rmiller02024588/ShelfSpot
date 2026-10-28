@@ -130,7 +130,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
         showsVerticalScrollIndicator={false}
         data={[]}
         keyExtractor={() => 'key'}
-        renderItem={null}
+        renderItem={undefined}
         ListHeaderComponent={
           <>
             {/* Item Name */}

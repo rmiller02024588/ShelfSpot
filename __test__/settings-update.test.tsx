@@ -40,7 +40,7 @@ jest.mock('react-native-paper', () => ({
 }));
 
 test('renders the logged-in user name default (User)', async () => {
-  const { getByText } = render(<SettingsScreen />);
+  const { getByText } = await render(<SettingsScreen />);
 
   await waitFor(() => {
     expect(getByText('User')).toBeTruthy();

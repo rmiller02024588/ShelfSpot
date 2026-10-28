@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { supabase } from "../Supabaseconfig";
 
 const COLORS = {
@@ -21,20 +21,31 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
 
   const makeAccount = async () => {
     if (loading) return;
+    if (!email.trim() || !password || !displayName.trim()) {
+      Alert.alert('Missing fields', 'Please enter an email, password, and display name.');
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
         password,
         options: {
           data: { display_name: displayName.trim() },
         },
       });
       if (error) {
-        console.log(error);
+        Alert.alert('Sign up failed', error.message);
+        return;
+      }
+      if (!data.session) {
+        Alert.alert(
+          'Check your email',
+          'Account created. Confirm your email, then log in.',
+        );
       }
     } catch (error) {
-      console.log(error);
+      Alert.alert('Sign up failed', error instanceof Error ? error.message : 'Unexpected error');
     } finally {
       setLoading(false);
     }

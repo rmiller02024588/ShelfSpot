@@ -72,13 +72,13 @@ jest.mock('react-native-paper', () => {
 
 jest.mock('@expo/vector-icons/AntDesign', () => () => null);
 
-test('renders the New Post header', () => {
-  const { getByText } = render(<PostScreen onBack={() => {}} />);
+test('renders the New Post header', async () => {
+  const { getByText } = await render(<PostScreen onBack={() => {}} />);
   expect(getByText('New Post')).toBeTruthy();
 });
 
-test('renders all form section labels', () => {
-  const { getByText } = render(<PostScreen onBack={() => {}} />);
+test('renders all form section labels', async () => {
+  const { getByText } = await render(<PostScreen onBack={() => {}} />);
   expect(getByText('Item Name')).toBeTruthy();
   expect(getByText('Location')).toBeTruthy();
   expect(getByText('Category')).toBeTruthy();
@@ -86,16 +86,16 @@ test('renders all form section labels', () => {
   expect(getByText('Photo')).toBeTruthy();
 });
 
-test('calls onBack when back button is pressed', () => {
+test('calls onBack when back button is pressed', async () => {
   const onBack = jest.fn();
-  const { getByTestId } = render(<PostScreen onBack={onBack} />);
+  const { getByTestId } = await render(<PostScreen onBack={onBack} />);
   fireEvent.press(getByTestId('backButton'));
   expect(onBack).toHaveBeenCalledTimes(1);
 });
 
 test('shows alert when posting with empty fields', async () => {
   jest.spyOn(Alert, 'alert');
-  const { getByText } = render(<PostScreen onBack={() => {}} />);
+  const { getByText } = await render(<PostScreen onBack={() => {}} />);
   fireEvent.press(getByText('Post'));
   await waitFor(() => {
     expect(Alert.alert).toHaveBeenCalledWith(
@@ -106,7 +106,7 @@ test('shows alert when posting with empty fields', async () => {
 });
 
 test('does not insert post when fields are missing', async () => {
-  const { getByText } = render(<PostScreen onBack={() => {}} />);
+  const { getByText } = await render(<PostScreen onBack={() => {}} />);
   fireEvent.press(getByText('Post'));
   await waitFor(() => {
     expect(mockInsert).not.toHaveBeenCalled();

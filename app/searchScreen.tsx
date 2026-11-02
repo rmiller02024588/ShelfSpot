@@ -1,75 +1,85 @@
-import MinPostCard from '@/components/minPost';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
-import React, { useState } from 'react';
-import { FlatList, StyleSheet, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Appbar } from 'react-native-paper';
-import { db } from '../Firebaseconfig';
+import Post from '../components/post';
+import { enrichPostsWithProfiles, formatPostTime, mapPost, type AppPost } from '../lib/posts';
+import { useThemeColors, type AppColors } from '../lib/theme';
+import { supabase } from '../Supabaseconfig';
 
-interface PostData {
-  id: string;
-  author: string;
-  description: string;
-  imageURL: string;
-  item: string;
-  time: any;
-  address: string;
-}
-
-const COLORS = {
-  background:    '#FAF7F2',
-  card:          '#FFFFFF',
-  accent:        '#C0784A',
-  accentLight:   '#F5EDE4',
-  text:          '#2C1A0E',
-  textSecondary: '#8C7B6E',
-  border:        '#E8DDD4',
-  inputBg:       '#FDF9F5',
-};
+const PAGE_SIZE = 10;
 
 export default function SearchScreen() {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [posts, setPosts] = useState<PostData[]>([]);
+  const [matchedPosts, setMatchedPosts] = useState<AppPost[]>([]);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const loadingMoreLock = useRef(false);
+  const requestId = useRef(0);
 
-  const fetchPosts = async (search: string) => {
+  const visiblePosts = matchedPosts.slice(0, visibleCount);
+  const hasMore = visibleCount < matchedPosts.length;
+
+  const fetchPosts = useCallback(async (search: string) => {
+    const trimmed = search.trim();
+    const keywords = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
+
+    if (keywords.length === 0) {
+      requestId.current += 1;
+      setMatchedPosts([]);
+      setVisibleCount(PAGE_SIZE);
+      setHasSearched(false);
+      setRefreshing(false);
+      return;
+    }
+
+    const currentRequest = ++requestId.current;
     setRefreshing(true);
-    const q1 = search.trim()
-      ? query(
-          collection(db, 'posts'),
-          where('item', '>=', search),
-          where('item', '<=', search + '\uf8ff'),
-          orderBy('item')
-        )
-      : query(collection(db, 'posts'), orderBy('time', 'desc'));
+    setHasSearched(true);
+    setVisibleCount(PAGE_SIZE);
 
-    const q2 = search.trim()
-      ? query(
-          collection(db, 'posts'),
-          where('author', '>=', search),
-          where('author', '<=', search + '\uf8ff'),
-          orderBy('author')
-        )
-      : query(collection(db, 'posts'), orderBy('time', 'desc'));
+    const { data } = await supabase.from('posts').select('*').order('time', { ascending: false });
+    if (currentRequest !== requestId.current) return;
 
-    const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-    const fetched1 = snapshot1.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data() as Omit<PostData, 'id'>
-    }));
-    const fetched2 = snapshot2.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data() as Omit<PostData, 'id'>
-    }));
-    const combined = [...fetched1, ...fetched2];
-    const unique = combined.filter((post, index, self) => self.findIndex(p => p.id === post.id) === index);
-    setPosts(unique);
+    const mapped = await enrichPostsWithProfiles((data ?? []).map(mapPost));
+    if (currentRequest !== requestId.current) return;
+
+    setMatchedPosts(
+      mapped.filter((post) => {
+        const haystack = [post.item, post.description, post.author, post.address, post.type]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return keywords.every((keyword) => haystack.includes(keyword));
+      })
+    );
     setRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      fetchPosts(searchQuery);
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [searchQuery, fetchPosts]);
+
+  const loadMore = () => {
+    if (refreshing || loadingMoreLock.current || !hasMore) return;
+
+    loadingMoreLock.current = true;
+    setLoadingMore(true);
+    setVisibleCount((count) => Math.min(count + PAGE_SIZE, matchedPosts.length));
+    setLoadingMore(false);
+    loadingMoreLock.current = false;
   };
 
-  React.useEffect(() => {
-    fetchPosts(searchQuery);
-  }, [searchQuery]);
+  const emptyMessage = !hasSearched
+    ? 'Search for cards, stores, or people'
+    : 'No posts match your search';
 
   return (
     <View style={styles.root}>
@@ -82,7 +92,7 @@ export default function SearchScreen() {
           <AntDesign name="search" size={16} color={COLORS.textSecondary} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search for a snack or drink..."
+            placeholder="Search by keywords..."
             placeholderTextColor={COLORS.textSecondary}
             clearButtonMode="always"
             autoCorrect={false}
@@ -93,19 +103,48 @@ export default function SearchScreen() {
       </View>
 
       <FlatList
-        data={posts}
+        data={visiblePosts}
         keyExtractor={(item) => item.id}
         refreshing={refreshing}
         onRefresh={() => fetchPosts(searchQuery)}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        contentContainerStyle={visiblePosts.length === 0 ? styles.emptyList : undefined}
+        ListEmptyComponent={
+          !refreshing ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>{emptyMessage}</Text>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.footer}>
+              <ActivityIndicator color={COLORS.accent} />
+            </View>
+          ) : hasSearched && !hasMore && matchedPosts.length > 0 ? (
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                Showing {matchedPosts.length} result{matchedPosts.length === 1 ? '' : 's'}
+              </Text>
+            </View>
+          ) : null
+        }
         renderItem={({ item }) => (
-          <MinPostCard
+          <Post
             author={item.author}
-            time={item.time?.toDate().toLocaleString() ?? ''}
+            userId={item.user_id}
+            avatarUrl={item.avatarUrl}
+            time={formatPostTime(item.time)}
             item={item.item}
             description={item.description}
             address={item.address}
             image={item.imageURL}
             postId={item.id}
+            reliabilityScore={item.reliabilityScore}
+            inStockVotes={item.inStockVotes}
+            soldOutVotes={item.soldOutVotes}
+            myVote={item.myVote}
           />
         )}
       />
@@ -113,7 +152,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -152,5 +191,28 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: COLORS.text,
+  },
+  emptyList: {
+    flexGrow: 1,
+  },
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 80,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  footer: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
   },
 });

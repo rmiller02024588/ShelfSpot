@@ -1,16 +1,16 @@
 # ShelfSpot
 
 ## Overview
-Tired of not being able to find your favorite niche snacks in the store?
+Tired of missing out on rare trading cards at stores near you?
 
-Try ShelfSpot, a crowd-sourced mobile platform for finding niche and limited-time food and drink products in stores near you. It's built for niche snack enthusiasts who are tired of visiting multiple stores based on outdated inventory information.
+Try ShelfSpot, a crowd-sourced mobile platform for finding collectible cards — Pokemon, sports, Magic (MTG), and more — in stores near you. Post sightings with a store location, photo, and description so other collectors can track them down.
 
-Users can post sightings of niche and limited-time items; each post includes the store location, a photo, and a description, so that other users can find these niche items. Posts are shown through a location-based feed, a keyword search, and an interactive map, making it easy to find exactly what you're looking for.
+Posts show up in a location-based feed, keyword search, and interactive map, making it easy to find the cards you're looking for.
 
 ## Tech Stack
 
 - React Native 0.81.5 + Expo 54
-- Firebase v12 (Auth + Firestore)
+- Supabase (Auth + PostgreSQL + Storage)
 - React Native Paper (UI)
 - React Native Maps
 - Google Maps API
@@ -46,8 +46,19 @@ There are 3 ways to run ShelfSpot. Install the prerequisites for whichever you p
 git clone https://github.com/rmiller02024588/ShelfSpot.git
 cd ShelfSpot
 npm install
+cp .env.example .env
 ```
 IMPORTANT: In order to access map feature you need to aquire a google maps api key and place it in a .env folder before running app, we can not provide this for every user individually for security purposes.
+
+Fill in `.env` with your Google Maps API key and Supabase credentials (`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` from your [Supabase project settings](https://supabase.com/dashboard)).
+
+### Supabase setup
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In the SQL editor, run the schema in `supabase/schema.sql`.
+3. Under **Authentication → Providers**, enable Email, Google, and Apple sign-in.
+4. Under **Authentication → URL Configuration**, add redirect URL `ShelfSpot://**` (and your Expo Go redirect if testing in Expo Go).
+5. Copy your project URL and anon key into `.env`.
 
 ## Running the App
 
@@ -73,8 +84,10 @@ This project uses GitHub Actions for continuous integration. Every push and pull
 ShelfSpot/
 ├── app/              # Screens (Bottom nav react-native paper)
 ├── components/       # Shared components (AuthGate, etc.)
+├── lib/              # Auth helpers and post utilities
+├── supabase/         # Database schema SQL
+├── Supabaseconfig.ts # Supabase client initialization
 ├── __test__/         # Unit tests
-├── Firebaseconfig.ts # Firebase initialization
 └── .github/          # CI workflows
 ```
 

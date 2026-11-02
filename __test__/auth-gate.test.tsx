@@ -10,14 +10,14 @@ const LoggedInScreen = () => (
   <View><Text>Home</Text></View>
 );
 
-test('shows login screen when user is not authenticated', () => {
-  const { getByText, queryByText } = render(<LoggedOutScreen />);
+test('shows login screen when user is not authenticated', async () => {
+  const { getByText, queryByText } = await render(<LoggedOutScreen />);
   expect(getByText('Login')).toBeTruthy();
   expect(queryByText('Home')).toBeNull();
 });
 
-test('shows app navigation when user is authenticated', () => {
-  const { getByText, queryByText } = render(<LoggedInScreen />);
+test('shows app navigation when user is authenticated', async () => {
+  const { getByText, queryByText } = await render(<LoggedInScreen />);
   expect(getByText('Home')).toBeTruthy();
   expect(queryByText('Login')).toBeNull();
 });

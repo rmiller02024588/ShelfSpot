@@ -1,16 +1,23 @@
 import MinPostCard from '@/components/minPost';
 import * as Location from 'expo-location';
 import type { User } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
-import { FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import StoreMarker from '../components/storeMarker';
 import { onAuthStateChanged } from '../lib/auth';
-import { mapPost, type AppPost } from '../lib/posts';
+import { enrichPostsWithProfiles, formatPostTime, mapPost, type AppPost } from '../lib/posts';
+import { useThemeColors, type AppColors } from '../lib/theme';
 import { supabase } from '../Supabaseconfig';
 
 
 type Post = AppPost;
+type StoreGroup = {
+    address: string;
+    posts: Post[];
+    coordinates: { latitude: number; longitude: number };
+};
+
 const defaultAddress: Location.LocationGeocodedAddress = {
     street: '220 pawtucket st',
     city: 'lowell',
@@ -46,32 +53,42 @@ export async function getUserLocation(): Promise<[number | null, number | null, 
     return [latitude, longitude, null];
 }
 
-function groupPostsByStore(posts: Post[]) {
-    const map: Record<string, {posts: Post[], coordinates: any}> = {};
+function hasValidCoordinates(coordinates: Post['coordinates'] | null | undefined) {
+    return (
+        !!coordinates &&
+        Number.isFinite(coordinates.latitude) &&
+        Number.isFinite(coordinates.longitude)
+    );
+}
+
+function groupPostsByStore(posts: Post[]): StoreGroup[] {
+    const map: Record<string, StoreGroup> = {};
 
     posts.forEach(post => {
-        const key = post.address;
+        if (!hasValidCoordinates(post.coordinates)) return;
+
+        const key = post.address || `${post.coordinates.latitude},${post.coordinates.longitude}`;
 
         if (!map[key]) {
-            map[key] = { posts: [], coordinates: post.coordinates };
+            map[key] = { address: key, posts: [], coordinates: post.coordinates };
         }
         map[key].posts.push(post);
     });
 
-    return Object.entries(map).map(([address, data])=> ({
-        address,
-        posts: data.posts,
-        coordinates: data.coordinates
-    }));
+    return Object.values(map);
 }
 
 
 
 export default function MapScreen() {
+    const COLORS = useThemeColors();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [selectedStore, setSelectedStore] = useState<any | null>(null);
+    const [selectedStore, setSelectedStore] = useState<StoreGroup | null>(null);
     const [posts, setPosts] = useState<AppPost[]>([]);
-
+    const [location, setLocation] = useState<[number, number]>([defaultLatitude, defaultLongitude]);
+    const [tracksViewChanges, setTracksViewChanges] = useState(true);
+    const mapRef = useRef<MapView>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged((u) => setCurrentUser(u));
@@ -81,7 +98,7 @@ export default function MapScreen() {
     useEffect(() => {
         const fetchPosts = async () => {
             const { data } = await supabase.from('posts').select('*');
-            if (data) setPosts(data.map(mapPost));
+            if (data) setPosts(await enrichPostsWithProfiles(data.map(mapPost)));
         };
 
         fetchPosts();
@@ -94,31 +111,41 @@ export default function MapScreen() {
         return () => { supabase.removeChannel(channel); };
     }, []);
 
-
-    const [location, setLocation] = useState<[number, number]>([defaultLatitude, defaultLongitude]);
-
     useEffect(() => {
         const fetchLocation = async () => {
             const [lat, lon] = await getUserLocation();
-                if (lat === null || lon === null) {
-                     setLocation([defaultLatitude, defaultLongitude]);
-                } else {
-                    setLocation([lat, lon]);
-                }
+            const nextLat = lat ?? defaultLatitude;
+            const nextLon = lon ?? defaultLongitude;
+            setLocation([nextLat, nextLon]);
+            mapRef.current?.animateToRegion?.({
+                latitude: nextLat,
+                longitude: nextLon,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            });
         };
         fetchLocation();
     }, []);
 
-    posts.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-    const groupedStores = groupPostsByStore(posts);
+    // Custom markers need one paint pass before freezing the bitmap, or taps miss the icon.
+    useEffect(() => {
+        setTracksViewChanges(true);
+        const timer = setTimeout(() => setTracksViewChanges(false), 750);
+        return () => clearTimeout(timer);
+    }, [posts]);
 
+    const sortedPosts = [...posts].sort(
+        (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+    );
+    const groupedStores = groupPostsByStore(sortedPosts);
 
   return (
     <View style={styles.container}>
         <MapView
+        ref={mapRef}
         style={styles.map}
         showsUserLocation={true}
-        region={{
+        initialRegion={{
             latitude: location[0],
             longitude: location[1],
             latitudeDelta: 0.05,
@@ -131,48 +158,57 @@ export default function MapScreen() {
                         latitude: store.coordinates.latitude,
                         longitude: store.coordinates.longitude
                     }}
-                
-                    onPress={() => setSelectedStore(store)}
+                    anchor={{ x: 0.5, y: 0.5 }}
+                    tracksViewChanges={tracksViewChanges}
+                    stopPropagation
+                    tappable
+                    onPress={(event) => {
+                        event.stopPropagation?.();
+                        setSelectedStore(store);
+                    }}
                 >
                     <StoreMarker count={store.posts.length} />
                 </Marker>
             ))}
         </MapView>
-        <Modal visible={!!selectedStore} animationType="slide" transparent>
-            <View style={{
-            flex: 1,
-            justifyContent: 'flex-end',
-            backgroundColor: 'rgba(0,0,0,0.3)'
-            }}>
-                <View style={{
-                backgroundColor: 'white',
-                padding: 20,
-                borderTopLeftRadius: 20,
-                borderTopRightRadius: 20,
-                maxHeight: '100%'
-                }}>
-                    <Text style={{ fontSize: 18, fontWeight: 'bold' }}>
+        <Modal
+            visible={!!selectedStore}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setSelectedStore(null)}
+        >
+            <View style={styles.modalRoot}>
+                <Pressable style={styles.modalBackdrop} onPress={() => setSelectedStore(null)} />
+                <View style={styles.modalSheet}>
+                    <Text style={styles.modalTitle}>
                         {selectedStore?.address}
                     </Text>
 
                     <FlatList
-                            data={selectedStore?.posts}
+                            data={selectedStore?.posts ?? []}
                             keyExtractor={(item) => item.id}
+                            style={styles.modalList}
                             renderItem={({ item }) => (
                             <MinPostCard
                                 author={item.author}
-                                time={item.time?.toDate().toLocaleString() ?? ''}
+                                userId={item.user_id}
+                                avatarUrl={item.avatarUrl}
+                                time={formatPostTime(item.time)}
                                 item={item.item}
                                 description={item.description}
                                 address={item.address}
                                 image={item.imageURL}
                                 postId={item.id}
+                                reliabilityScore={item.reliabilityScore}
+                                inStockVotes={item.inStockVotes}
+                                soldOutVotes={item.soldOutVotes}
+                                myVote={item.myVote}
                             />
                             )}
                     />
 
-                    <TouchableOpacity onPress={() => setSelectedStore(null)}>
-                        <Text style={{ color: 'blue', marginTop: 10 }}>Close</Text>
+                    <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedStore(null)}>
+                        <Text style={styles.closeButtonText}>Close</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -181,12 +217,53 @@ export default function MapScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
   },
   map: {
     width: '100%',
     height: '100%',
+  },
+  modalRoot: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  modalSheet: {
+    backgroundColor: COLORS.card,
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: COLORS.text,
+  },
+  modalList: {
+    flexGrow: 0,
+  },
+  closeButton: {
+    marginTop: 12,
+    alignSelf: 'center',
+    backgroundColor: COLORS.accent,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  closeButtonText: {
+    color: COLORS.onAccent,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

@@ -43,6 +43,7 @@ jest.mock('../lib/auth', () => ({
     callback({ id: 'test-uid', email: 'test@example.com' });
     return jest.fn();
   }),
+  getCurrentUser: jest.fn(() => Promise.resolve({ id: 'test-uid', email: 'test@example.com' })),
 }));
 
 jest.mock('../Supabaseconfig', () => {
@@ -51,12 +52,12 @@ jest.mock('../Supabaseconfig', () => {
     id: '1',
     user_id: 'test-uid',
     author: 'test',
-    item: 'Pepsi',
+    item: 'Charizard',
     description: 'Two left',
     address: '123 Main St',
     image_url: '',
     time: '2026-01-01T00:00:00.000Z',
-    type: '1',
+    type: 'pokemon',
     latitude: 42.6500221,
     longitude: -71.3241605,
     exp_date: '2026-02-01T00:00:00.000Z',
@@ -67,6 +68,7 @@ jest.mock('../Supabaseconfig', () => {
     const chain = () => query;
     query.select = jest.fn(chain);
     query.eq = jest.fn(chain);
+    query.in = jest.fn(chain);
     query.then = jest.fn((resolve, reject) => result.then(resolve, reject));
     query.catch = jest.fn((reject) => result.catch(reject));
     return query;
@@ -74,7 +76,18 @@ jest.mock('../Supabaseconfig', () => {
 
   return {
     supabase: {
-      from: jest.fn(() => createQuery([mockPost])),
+      from: jest.fn((table: string) => {
+        if (table === 'profiles') {
+          return createQuery([{
+            id: 'test-uid',
+            display_name: 'test',
+            avatar_url: null,
+            email: 'test@example.com',
+          }]);
+        }
+        if (table === 'stock_votes') return createQuery([]);
+        return createQuery([mockPost]);
+      }),
       channel: jest.fn(() => mockChannel),
       removeChannel: jest.fn(),
     },

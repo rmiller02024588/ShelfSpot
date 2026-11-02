@@ -8,6 +8,8 @@ jest.mock('../lib/auth', () => ({
     return jest.fn();
   }),
   getDisplayName: jest.fn(() => 'User'),
+  getAvatarUrl: jest.fn(() => null),
+  syncProfileFromUser: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('../Supabaseconfig', () => ({
@@ -15,8 +17,25 @@ jest.mock('../Supabaseconfig', () => ({
     auth: {
       updateUser: jest.fn(() => Promise.resolve({ error: null })),
       signOut: jest.fn(() => Promise.resolve({ error: null })),
+      signInWithPassword: jest.fn(() => Promise.resolve({ error: null })),
+    },
+    from: jest.fn(() => ({
+      update: jest.fn().mockReturnThis(),
+      upsert: jest.fn(() => Promise.resolve({ error: null })),
+      eq: jest.fn(() => Promise.resolve({ error: null })),
+    })),
+    storage: {
+      from: jest.fn(() => ({
+        upload: jest.fn(() => Promise.resolve({ error: null })),
+        getPublicUrl: jest.fn(() => ({ data: { publicUrl: 'https://example.com/avatar.jpg' } })),
+      })),
     },
   },
+}));
+
+jest.mock('expo-image-picker', () => ({
+  requestMediaLibraryPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  launchImageLibraryAsync: jest.fn(() => Promise.resolve({ canceled: true })),
 }));
 
 jest.mock('react-native-paper', () => ({
@@ -25,6 +44,10 @@ jest.mock('react-native-paper', () => ({
       const { Text } = require('react-native');
       return <Text>{label}</Text>;
     },
+    Image: () => {
+      const { View } = require('react-native');
+      return <View testID="avatar-image" />;
+    },
   },
   Appbar: {
     Header: ({ children }: any) => {
@@ -32,6 +55,7 @@ jest.mock('react-native-paper', () => ({
       return <View>{children}</View>;
     },
     BackAction: () => null,
+    Action: () => null,
     Content: ({ title }: any) => {
       const { Text } = require('react-native');
       return <Text>{title}</Text>;
@@ -44,5 +68,17 @@ test('renders the logged-in user name default (User)', async () => {
 
   await waitFor(() => {
     expect(getByText('User')).toBeTruthy();
+  });
+});
+
+test('renders change password section', async () => {
+  const { getByText, getByPlaceholderText } = await render(<SettingsScreen />);
+
+  await waitFor(() => {
+    expect(getByText('Change Password')).toBeTruthy();
+    expect(getByPlaceholderText('Current password')).toBeTruthy();
+    expect(getByPlaceholderText('New password')).toBeTruthy();
+    expect(getByPlaceholderText('Confirm new password')).toBeTruthy();
+    expect(getByText('Update Password')).toBeTruthy();
   });
 });

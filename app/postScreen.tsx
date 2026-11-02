@@ -1,34 +1,21 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
-import { Alert, FlatList, Image, Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Dropdown } from 'react-native-element-dropdown';
+import React, { useMemo, useState } from 'react';
+import { Alert, Image, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 import { Appbar } from 'react-native-paper';
-import { getDisplayName } from '../lib/auth';
+import { getDisplayName, syncProfileFromUser } from '../lib/auth';
+import { CATEGORIES } from '../lib/categories';
+import { useThemeColors, type AppColors } from '../lib/theme';
 import { supabase } from '../Supabaseconfig';
 
 type PostScreenProps = {
   onBack: () => void;
 };
 
-const CATEGORIES = [
-  { label: 'Snack', value: '1' },
-  { label: 'Drink', value: '2' },
-];
-
-const COLORS = {
-  background: '#FAF7F2',
-  card: '#FFFFFF',
-  accent: '#C0784A',
-  accentLight: '#F5EDE4',
-  text: '#2C1A0E',
-  textSecondary: '#8C7B6E',
-  border: '#E8DDD4',
-  inputBg: '#FDF9F5',
-};
-
 export default function PostScreen({ onBack }: PostScreenProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [itemValue, setItemValue] = useState('');
   const [addressValue, setAddressValue] = useState('');
   const [descriptionValue, setDescriptionValue] = useState('');
@@ -56,12 +43,17 @@ export default function PostScreen({ onBack }: PostScreenProps) {
   };
 
   const handlePost = async () => {
-    if (apiKey === undefined) {
+    if (!apiKey) {
       Alert.alert('API Key Missing', 'To make a post, a Google Maps API key is required. Please set the EXPO_PUBLIC_API_KEY environment variable.');
       return;
     }
 
-    if (itemValue !== '' && addressValue !== '' && descriptionValue !== '' && selected !== '' && image !== null) {
+    if (itemValue !== '' && addressValue !== '' && descriptionValue !== '' && selected !== null && image !== null) {
+      if (!Number.isFinite(latValue) || !Number.isFinite(longValue) || (latValue === 0 && longValue === 0)) {
+        Alert.alert('Missing location', 'Please select an address from the search suggestions so the map can place your post.');
+        return;
+      }
+
       const response = await fetch(image);
       const arrayBuffer = await response.arrayBuffer();
       const fileName = `${Date.now()}.jpg`;
@@ -76,10 +68,21 @@ export default function PostScreen({ onBack }: PostScreenProps) {
 
       const { data: { publicUrl } } = supabase.storage.from('images').getPublicUrl(fileName);
       const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Not signed in', 'Please log in again before posting.');
+        return;
+      }
+
+      await syncProfileFromUser(user);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .maybeSingle();
 
       const postData = {
-        user_id: user!.id,
-        author: getDisplayName(user),
+        user_id: user.id,
+        author: profile?.display_name || getDisplayName(user),
         item: itemValue,
         address: addressValue,
         description: descriptionValue,
@@ -100,7 +103,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
       onBack();
     }
     else {
-      Alert.alert('Missing fields', 'Please fill out all fields and select at least one category.');
+      Alert.alert('Missing fields', 'Please fill out all fields and select a category.');
     }
   };
 
@@ -123,16 +126,19 @@ export default function PostScreen({ onBack }: PostScreenProps) {
         </TouchableOpacity>
       </Appbar.Header>
 
-      <FlatList
+      <KeyboardAvoidingView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        data={[]}
-        keyExtractor={() => 'key'}
-        renderItem={undefined}
-        ListHeaderComponent={
-          <>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+        >
             {/* Item Name */}
             <View style={styles.card}>
               <Text style={styles.sectionLabel}>Item Name</Text>
@@ -144,29 +150,41 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                 placeholder="What did you find?"
                 placeholderTextColor={COLORS.textSecondary}
                 clearButtonMode="always"
+                caretHidden={false}
+                selectionColor={COLORS.accent}
+                cursorColor={COLORS.accent}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
               />
             </View>
 
             {/* Location */}
-            <View style={styles.card}>
+            <View style={[styles.card, styles.locationCard]}>
               <Text style={styles.sectionLabel}>Location</Text>
               <View style={styles.locationInputWrapper}>
                 <AntDesign name="pushpin" size={16} color={COLORS.accent} style={styles.locationIcon} />
                 <GooglePlacesAutocomplete
                   placeholder="Search for an address..."
                   onPress={(data, details = null) => {
-                    const { lat, lng } = details!.geometry.location;
+                    const location = details?.geometry?.location;
+                    if (!location) {
+                      Alert.alert('Location unavailable', 'Could not load coordinates for that address. Please try another suggestion.');
+                      return;
+                    }
                     setAddressValue(data.description);
-                    setLatValue(lat);
-                    setLongValue(lng);
+                    setLatValue(location.lat);
+                    setLongValue(location.lng);
+                    Keyboard.dismiss();
                   }}
                   query={{
                     key: apiKey,
                     language: 'en',
                   }}
                   fetchDetails={true}
+                  enablePoweredByContainer={false}
+                  listViewDisplayed="auto"
                   styles={{
-                    container: { flex: 1 },
+                    container: { flex: 0, flexGrow: 1, zIndex: 2 },
                     textInputContainer: { backgroundColor: 'transparent' },
                     textInput: {
                       height: 44,
@@ -182,6 +200,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                       borderRadius: 8,
                       marginTop: 4,
                       elevation: 4,
+                      zIndex: 3,
                     },
                     row: { paddingVertical: 10 },
                     description: { color: COLORS.text, fontSize: 14 },
@@ -193,29 +212,31 @@ export default function PostScreen({ onBack }: PostScreenProps) {
             {/* Category */}
             <View style={styles.card}>
               <Text style={styles.sectionLabel}>Category</Text>
-              <Dropdown
-                style={styles.dropdown}
-                placeholderStyle={styles.dropdownPlaceholder}
-                selectedTextStyle={styles.dropdownSelectedText}
-                inputSearchStyle={styles.dropdownSearch}
-                iconStyle={styles.dropdownIcon}
-                containerStyle={styles.dropdownContainer}
-                search
-                data={CATEGORIES}
-                labelField="label"
-                valueField="value"
-                placeholder="Select categories..."
-                searchPlaceholder="Search..."
-                value={selected}
-
-                onChange={item => {
-                  setSelected(item.value);
-                }}
-                renderLeftIcon={() => (
-                  <AntDesign name="tag" style={styles.dropdownLeftIcon} color={COLORS.accent} size={16} />
-                )}
-              //selectedStyle={styles.selectedChip}
-              />
+              <View style={styles.categoryRow}>
+                {CATEGORIES.map((category) => {
+                  const isSelected = selected === category.value;
+                  return (
+                    <TouchableOpacity
+                      key={category.value}
+                      style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+                      onPress={() => {
+                        setSelected(category.value);
+                        Keyboard.dismiss();
+                      }}
+                      activeOpacity={0.75}
+                    >
+                      <AntDesign
+                        name="tag"
+                        size={14}
+                        color={isSelected ? COLORS.onAccent : COLORS.accent}
+                      />
+                      <Text style={[styles.categoryChipText, isSelected && styles.categoryChipTextSelected]}>
+                        {category.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             {/* Description */}
@@ -224,19 +245,16 @@ export default function PostScreen({ onBack }: PostScreenProps) {
               <TextInput
                 style={styles.inputTall}
                 value={descriptionValue}
-                onChangeText={setDescriptionValue}
+                onChangeText={(text) => setDescriptionValue(text.slice(0, 300))}
                 autoCorrect={false}
                 placeholder="Describe the item, condition, quantity..."
                 placeholderTextColor={COLORS.textSecondary}
-                clearButtonMode="always"
                 textAlignVertical="top"
                 multiline
-                returnKeyType='done'
-                onKeyPress={({ nativeEvent }) => {
-                  if (nativeEvent.key === 'Enter') {
-                    Keyboard.dismiss();
-                  }
-                }}
+                blurOnSubmit={false}
+                caretHidden={false}
+                selectionColor={COLORS.accent}
+                cursorColor={COLORS.accent}
               />
               <Text style={styles.charCount}>{descriptionValue.length} / 300</Text>
             </View>
@@ -270,14 +288,13 @@ export default function PostScreen({ onBack }: PostScreenProps) {
             </View>
 
             <View style={styles.bottomSpacer} />
-          </>
-        }
-      />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -302,7 +319,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   postButtonText: {
-    color: '#fff',
+    color: COLORS.onAccent,
     fontWeight: '700',
     fontSize: 14,
     letterSpacing: 0.2,
@@ -315,11 +332,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius: 14,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
+  },
+  locationCard: {
+    overflow: 'visible',
+    zIndex: 2,
   },
   sectionLabel: {
     fontSize: 11,
@@ -335,7 +356,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 15,
     minHeight: 44,
-    paddingHorizontal: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: COLORS.text,
   },
   inputTall: {
     backgroundColor: COLORS.inputBg,
@@ -365,49 +388,33 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
 
-  dropdown: {
-    backgroundColor: COLORS.inputBg,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minHeight: 44,
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
-  dropdownPlaceholder: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
-  },
-  dropdownSelectedText: {
-    fontSize: 14,
-    color: COLORS.text,
-  },
-  dropdownSearch: {
-    height: 40,
-    fontSize: 15,
-    color: COLORS.text,
-  },
-  dropdownIcon: {
-    width: 20,
-    height: 20,
-  },
-  dropdownContainer: {
-    borderRadius: 12,
-    borderColor: COLORS.border,
-  },
-  dropdownLeftIcon: {
-    marginRight: 8,
-  },
-  selectedChip: {
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: COLORS.accentLight,
     borderRadius: 20,
-    borderWidth: 0,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  selectedChipText: {
+  categoryChipSelected: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
+  },
+  categoryChipText: {
     color: COLORS.accent,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 14,
+  },
+  categoryChipTextSelected: {
+    color: COLORS.onAccent,
   },
 
   imagePicker: {

@@ -1,31 +1,46 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
-import React, { useEffect, useRef, useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getCurrentUser } from '../lib/auth';
+import type { StockVote } from '../lib/posts';
+import { useThemeColors, type AppColors } from '../lib/theme';
 import { supabase } from '../Supabaseconfig';
+import ReliabilityVote from './reliabilityVote';
 
 type PostCardProps = {
     author: string;
+    userId?: string;
+    avatarUrl?: string | null;
     item: string;
     description: string;
     address: string;
     image: string;
     time: string;
     postId: string;
+    reliabilityScore?: number | null;
+    inStockVotes?: number;
+    soldOutVotes?: number;
+    myVote?: StockVote | null;
 };
 
-const COLORS = {
-    background: '#FAF7F2',
-    card: '#FFFFFF',
-    accent: '#C0784A',
-    accentLight: '#F5EDE4',
-    text: '#2C1A0E',
-    textSecondary: '#8C7B6E',
-    border: '#E8DDD4',
-    inputBg: '#FDF9F5',
-};
-
-export default function MinPostCard({ author, item, description, address, image, time, postId }: PostCardProps) {
+export default function MinPostCard({
+    author,
+    userId,
+    avatarUrl = null,
+    item,
+    description,
+    address,
+    image,
+    time,
+    postId,
+    reliabilityScore = null,
+    inStockVotes = 0,
+    soldOutVotes = 0,
+    myVote = null,
+}: PostCardProps) {
+    const COLORS = useThemeColors();
+    const styles = useMemo(() => createStyles(COLORS), [COLORS]);
     const [saved, setSaved] = useState(false);
     const [expanded, setExpanded] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -124,6 +139,14 @@ export default function MinPostCard({ author, item, description, address, image,
                 <View style={styles.minInfo}>
                     <Text style={styles.itemName} numberOfLines={1}>{item}</Text>
                     <View style={styles.metaRow}>
+                        <ReliabilityVote
+                            postId={postId}
+                            reliabilityScore={reliabilityScore}
+                            inStockVotes={inStockVotes}
+                            soldOutVotes={soldOutVotes}
+                            myVote={myVote}
+                            compact
+                        />
                         {time ? (
                             <View style={styles.metaChip}>
                                 <AntDesign name="clock-circle" size={11} color={COLORS.textSecondary} />
@@ -165,10 +188,14 @@ export default function MinPostCard({ author, item, description, address, image,
                     <View style={styles.body}>
                         <View style={styles.authorRow}>
                             <View style={styles.avatar}>
-                                <Text style={styles.avatarText}>{initials}</Text>
+                                {avatarUrl ? (
+                                    <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+                                ) : (
+                                    <Text style={styles.avatarText}>{initials}</Text>
+                                )}
                             </View>
                             <View style={styles.authorInfo}>
-                                <Text style={styles.authorName}>{author}</Text>
+                                <Text style={styles.authorName}>{author || 'Unknown'}</Text>
                                 <Text style={styles.timeText}>{time}</Text>
                             </View>
                             <TouchableOpacity
@@ -176,10 +203,10 @@ export default function MinPostCard({ author, item, description, address, image,
                                 style={styles.saveButton}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
-                                <AntDesign
-                                    name="heart"
-                                    size={18}
-                                    color={saved ? COLORS.accent : COLORS.textSecondary}
+                                <Ionicons
+                                    name={saved ? 'bookmark' : 'bookmark-outline'}
+                                    size={22}
+                                    color={saved ? COLORS.accent : COLORS.border}
                                 />
                             </TouchableOpacity>
                         </View>
@@ -193,6 +220,14 @@ export default function MinPostCard({ author, item, description, address, image,
                                 <Text style={styles.locationText} numberOfLines={1}>{address}</Text>
                             </View>
                         ) : null}
+
+                        <ReliabilityVote
+                            postId={postId}
+                            reliabilityScore={reliabilityScore}
+                            inStockVotes={inStockVotes}
+                            soldOutVotes={soldOutVotes}
+                            myVote={myVote}
+                        />
                     </View>
                 </Animated.View>
             )}
@@ -208,25 +243,22 @@ const unsavePost = async (userId: string, postId: string) => {
     await supabase.from('saved_posts').delete().eq('user_id', userId).eq('post_id', postId);
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
     card: {
         backgroundColor: COLORS.card,
-        borderRadius: 16,
+        borderRadius: 12,
         marginHorizontal: 16,
-        marginVertical: 8,
+        marginVertical: 6,
         overflow: 'hidden',
-        shadowColor: '#C0784A',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 2,
+        borderWidth: 1,
+        borderColor: COLORS.border,
     },
 
     minRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 14,
-        paddingVertical: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         gap: 8,
     },
     minInfo: {
@@ -252,9 +284,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 4,
         backgroundColor: COLORS.accentLight,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 20,
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+        borderRadius: 16,
     },
     expandLabel: {
         fontSize: 12,
@@ -267,41 +299,46 @@ const styles = StyleSheet.create({
     divider: {
         height: 1,
         backgroundColor: COLORS.border,
-        marginHorizontal: 14,
+        marginHorizontal: 12,
     },
     image: {
         width: '100%',
-        height: 400,
+        height: 200,
     },
     imagePlaceholder: {
         width: '100%',
-        height: 140,
+        height: 100,
         backgroundColor: COLORS.accentLight,
         justifyContent: 'center',
         alignItems: 'center',
     },
     body: {
-        padding: 14,
-        gap: 6,
+        paddingHorizontal: 12,
+        paddingTop: 10,
+        paddingBottom: 12,
+        gap: 4,
     },
     authorRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     avatar: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         backgroundColor: COLORS.accentLight,
-        borderWidth: 1,
-        borderColor: COLORS.border,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 10,
+        marginRight: 8,
+        overflow: 'hidden',
+    },
+    avatarImage: {
+        width: 28,
+        height: 28,
     },
     avatarText: {
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: '700',
         color: COLORS.accent,
     },
@@ -316,10 +353,9 @@ const styles = StyleSheet.create({
     timeText: {
         fontSize: 11,
         color: COLORS.textSecondary,
-        marginTop: 1,
     },
     saveButton: {
-        padding: 4,
+        padding: 2,
     },
     itemName: {
         fontSize: 15,
@@ -328,15 +364,14 @@ const styles = StyleSheet.create({
         letterSpacing: -0.2,
     },
     description: {
-        fontSize: 14,
+        fontSize: 13,
         color: COLORS.textSecondary,
-        lineHeight: 20,
+        lineHeight: 18,
     },
     locationRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        marginTop: 2,
     },
     locationText: {
         fontSize: 12,

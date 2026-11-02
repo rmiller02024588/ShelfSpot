@@ -18,14 +18,25 @@ jest.mock('../Supabaseconfig', () => ({
         getPublicUrl: jest.fn(() => ({ data: { publicUrl: 'https://example.com/img.jpg' } })),
       })),
     },
-    from: jest.fn(() => ({
-      insert: mockInsert,
-    })),
+    from: jest.fn((table: string) => {
+      if (table === 'profiles') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          maybeSingle: jest.fn(() => Promise.resolve({
+            data: { display_name: 'test' },
+            error: null,
+          })),
+        };
+      }
+      return { insert: mockInsert };
+    }),
   },
 }));
 
 jest.mock('../lib/auth', () => ({
   getDisplayName: jest.fn(() => 'test'),
+  syncProfileFromUser: jest.fn(() => Promise.resolve()),
 }));
 
 jest.mock('expo-image-picker', () => ({

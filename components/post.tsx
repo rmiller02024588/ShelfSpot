@@ -1,33 +1,47 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
-import React, { useEffect, useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useProfileNav } from '../context/ProfileNavContext';
 import { getCurrentUser } from '../lib/auth';
+import type { StockVote } from '../lib/posts';
+import { useThemeColors, type AppColors } from '../lib/theme';
 import { supabase } from '../Supabaseconfig';
+import ReliabilityVote from './reliabilityVote';
 
 type PostCardProps = {
   author: string;
   userId: string;
+  avatarUrl?: string | null;
   item: string;
   description: string;
   address: string;
   image: string;
   time: string;
   postId: string;
+  reliabilityScore?: number | null;
+  inStockVotes?: number;
+  soldOutVotes?: number;
+  myVote?: StockVote | null;
 };
 
-const COLORS = {
-  background: '#FAF7F2',
-  card: '#FFFFFF',
-  accent: '#C0784A',
-  accentLight: '#F5EDE4',
-  text: '#2C1A0E',
-  textSecondary: '#8C7B6E',
-  border: '#E8DDD4',
-  inputBg: '#FDF9F5',
-};
-
-export default function PostCard({ author, userId, item, description, address, image, time, postId }: PostCardProps) {
+export default function PostCard({
+  author,
+  userId,
+  avatarUrl = null,
+  item,
+  description,
+  address,
+  image,
+  time,
+  postId,
+  reliabilityScore = null,
+  inStockVotes = 0,
+  soldOutVotes = 0,
+  myVote = null,
+}: PostCardProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [saved, setSaved] = useState(false);
   const { onViewProfile } = useProfileNav();
 
@@ -84,7 +98,6 @@ export default function PostCard({ author, userId, item, description, address, i
         .eq('post_id', postId)
         .maybeSingle();
       setSaved(!!data);
-
     } catch (err) {
       setSaved(!newSavedState);
       console.error('Error saving/unsaving post:', err);
@@ -106,7 +119,7 @@ export default function PostCard({ author, userId, item, description, address, i
         <Image source={{ uri: image }} style={styles.image} />
       ) : (
         <View style={styles.imagePlaceholder}>
-          <AntDesign name="picture" size={32} color={COLORS.textSecondary} />
+          <AntDesign name="picture" size={28} color={COLORS.textSecondary} />
         </View>
       )}
 
@@ -118,10 +131,14 @@ export default function PostCard({ author, userId, item, description, address, i
             activeOpacity={0.6}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials}</Text>
+              {avatarUrl ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{initials}</Text>
+              )}
             </View>
             <View style={styles.authorInfo}>
-              <Text style={styles.authorName}>{author}</Text>
+              <Text style={styles.authorName}>{author || 'Unknown'}</Text>
               <Text style={styles.timeText}>{time}</Text>
             </View>
           </TouchableOpacity>
@@ -130,10 +147,10 @@ export default function PostCard({ author, userId, item, description, address, i
             style={styles.saveButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <AntDesign
-              name={'heart'}
-              size={18}
-              color={saved ? COLORS.accent : COLORS.textSecondary}
+            <Ionicons
+              name={saved ? 'bookmark' : 'bookmark-outline'}
+              size={20}
+              color={saved ? COLORS.accent : COLORS.border}
             />
           </TouchableOpacity>
         </View>
@@ -146,15 +163,22 @@ export default function PostCard({ author, userId, item, description, address, i
 
         {address ? (
           <View style={styles.locationRow}>
-            <AntDesign name="pushpin" size={12} color={COLORS.textSecondary} />
+            <AntDesign name="pushpin" size={11} color={COLORS.textSecondary} />
             <Text style={styles.locationText} numberOfLines={1}>{address}</Text>
           </View>
         ) : null}
+
+        <ReliabilityVote
+          postId={postId}
+          reliabilityScore={reliabilityScore}
+          inStockVotes={inStockVotes}
+          soldOutVotes={soldOutVotes}
+          myVote={myVote}
+        />
       </View>
     </View>
   );
 }
-
 
 const savePost = async (userId: string, postId: string) => {
   await supabase.from('saved_posts').insert({ user_id: userId, post_id: postId });
@@ -164,38 +188,37 @@ const unsavePost = async (userId: string, postId: string) => {
   await supabase.from('saved_posts').delete().eq('user_id', userId).eq('post_id', postId);
 };
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 16,
+    borderRadius: 12,
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 6,
     overflow: 'hidden',
-    shadowColor: '#C0784A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   image: {
     width: '100%',
-    height: 400,
+    height: 200,
   },
   imagePlaceholder: {
     width: '100%',
-    height: 140,
+    height: 100,
     backgroundColor: COLORS.accentLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   body: {
-    padding: 14,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
+    gap: 4,
   },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   authorPressable: {
     flexDirection: 'row',
@@ -203,18 +226,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: COLORS.accentLight,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 8,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: 28,
+    height: 28,
   },
   avatarText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: COLORS.accent,
   },
@@ -229,27 +255,25 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 11,
     color: COLORS.textSecondary,
-    marginTop: 1,
   },
   saveButton: {
-    padding: 4,
+    padding: 2,
   },
   itemName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.text,
     letterSpacing: -0.2,
   },
   description: {
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.textSecondary,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 2,
   },
   locationText: {
     fontSize: 12,

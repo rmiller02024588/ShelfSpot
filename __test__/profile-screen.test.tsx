@@ -6,12 +6,12 @@ const mockPost = {
   id: '1',
   user_id: 'test-uid',
   author: 'test',
-  item: 'Pepsi',
+  item: 'Charizard',
   description: 'Two left',
   address: '123 Main St',
   image_url: '',
   time: '2026-01-01T00:00:00.000Z',
-  type: '1',
+  type: 'pokemon',
   latitude: 0,
   longitude: 0,
   exp_date: '2026-02-01T00:00:00.000Z',
@@ -23,11 +23,14 @@ jest.mock('../lib/auth', () => ({
     return jest.fn();
   }),
   getDisplayName: jest.fn(() => 'test'),
+  getAvatarUrl: jest.fn(() => null),
+  syncProfileFromUser: jest.fn(() => Promise.resolve()),
+  getCurrentUser: jest.fn(() => Promise.resolve({ id: 'test-uid', email: 'test@example.com' })),
 }));
 
 jest.mock('../Supabaseconfig', () => {
   const mockChannel = { on: jest.fn().mockReturnThis(), subscribe: jest.fn() };
-  const createQuery = (data: unknown[] = [], count = 0) => {
+  const createQuery = (data: unknown[] = [], count = 0, single: unknown = null) => {
     const result = Promise.resolve({ data, error: null, count });
     const query: Record<string, jest.Mock> = {};
     const chain = () => query;
@@ -35,6 +38,7 @@ jest.mock('../Supabaseconfig', () => {
     query.eq = jest.fn(chain);
     query.in = jest.fn(chain);
     query.order = jest.fn(chain);
+    query.maybeSingle = jest.fn(() => Promise.resolve({ data: single, error: null }));
     query.then = jest.fn((resolve, reject) => result.then(resolve, reject));
     query.catch = jest.fn((reject) => result.catch(reject));
     return query;
@@ -46,6 +50,8 @@ jest.mock('../Supabaseconfig', () => {
         if (table === 'posts') return createQuery([mockPost]);
         if (table === 'saved_posts') return createQuery([]);
         if (table === 'following') return createQuery([], 0);
+        if (table === 'profiles') return createQuery([], 0, { avatar_url: null });
+        if (table === 'stock_votes') return createQuery([]);
         return createQuery();
       }),
       channel: jest.fn(() => mockChannel),
@@ -59,6 +65,10 @@ jest.mock('react-native-paper', () => ({
     Text: ({ label }: any) => {
       const { Text } = require('react-native');
       return <Text>{label}</Text>;
+    },
+    Image: () => {
+      const { View } = require('react-native');
+      return <View testID="avatar-image" />;
     },
   },
 }));
@@ -93,15 +103,16 @@ test('renders the avatar initials', async () => {
 });
 
 test('renders Posts and Saves tabs', async () => {
-  const { getByText } = await render(<ProfileScreen />);
-  expect(getByText('Posts')).toBeTruthy();
+  const { getByText, getAllByText } = await render(<ProfileScreen />);
+  expect(getAllByText('Posts').length).toBeGreaterThan(0);
   expect(getByText('Saves')).toBeTruthy();
+  expect(getByText('Followers')).toBeTruthy();
 });
 
 test('renders post data after fetch', async () => {
   const { getByText } = await render(<ProfileScreen />);
   await waitFor(() => {
-    expect(getByText('Pepsi')).toBeTruthy();
+    expect(getByText('Charizard')).toBeTruthy();
     expect(getByText('Two left')).toBeTruthy();
     expect(getByText('123 Main St')).toBeTruthy();
   });
@@ -109,9 +120,9 @@ test('renders post data after fetch', async () => {
 
 test('switches to Saves tab and hides posts', async () => {
   const { getByText, queryByText } = await render(<ProfileScreen />);
-  await waitFor(() => expect(getByText('Pepsi')).toBeTruthy());
+  await waitFor(() => expect(getByText('Charizard')).toBeTruthy());
   fireEvent.press(getByText('Saves'));
   await waitFor(() => {
-    expect(queryByText('Pepsi')).toBeNull();
+    expect(queryByText('Charizard')).toBeNull();
   });
 });

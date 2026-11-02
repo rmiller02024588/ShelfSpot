@@ -22,6 +22,7 @@
     "@supabase/supabase-js": "^2.108.2",
     "dotenv": "^17.3.1",
     "expo": "~58.0.0",
+    "expo-auth-session": "~58.0.16",
     "expo-constants": "~58.0.13",
     "expo-font": "~58.0.10",
     "expo-google-places-autocomplete": "^1.2.0",

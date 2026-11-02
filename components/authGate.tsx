@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { BottomNavigation, PaperProvider } from "react-native-paper";
 import { onAuthStateChanged } from "../lib/auth";
+import { useThemeColors } from "../lib/theme";
 import HomeScreen from "../app/index";
 import LoginScreen from "../app/loginScreen";
 import MapScreen from "../app/mapScreen";
@@ -18,6 +19,7 @@ import SignUpScreen from './../app/signUpScreen';
 
 export default function AuthGate() {
 
+  const COLORS = useThemeColors();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [index, setIndex] = useState(0);
@@ -57,8 +59,8 @@ export default function AuthGate() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: '#FAF7F2' }}>
-        <ActivityIndicator size="large" color="#C0784A" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background }}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
       </View>
     );
   }
@@ -109,11 +111,11 @@ export default function AuthGate() {
           navigationState={{ index, routes }}
           onIndexChange={setIndex}
           renderScene={renderScene}
-          barStyle={{ backgroundColor: '#FFFFFF' }}
+          barStyle={{ backgroundColor: COLORS.card }}
           theme={{
             colors: {
-              secondaryContainer: '#F5EDE4',
-              onSecondaryContainer: '#C0784A',
+              secondaryContainer: COLORS.accentLight,
+              onSecondaryContainer: COLORS.accent,
             }
           }}
         />

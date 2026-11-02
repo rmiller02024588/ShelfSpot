@@ -1,36 +1,92 @@
-import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { supabase } from "../Supabaseconfig";
-
-const COLORS = {
-  background:    '#FAF7F2',
-  card:          '#FFFFFF',
-  accent:        '#C0784A',
-  accentLight:   '#F5EDE4',
-  text:          '#2C1A0E',
-  textSecondary: '#8C7B6E',
-  border:        '#E8DDD4',
-  inputBg:       '#FDF9F5',
-};
+import AntDesign from '@expo/vector-icons/AntDesign';
+import React, { useMemo, useState } from 'react';
+import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { signInWithOAuthProvider } from '../lib/auth';
+import { useThemeColors, type AppColors } from '../lib/theme';
+import { supabase } from '../Supabaseconfig';
 
 export default function LoginScreen({ onGoToSignup }: { onGoToSignup?: () => void }) {
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const appleContentColor = COLORS.apple === '#FFFFFF' ? COLORS.onAccent : '#FFFFFF';
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
 
   const login = async () => {
+    if (loading || oauthLoading) return;
+    setErrorMessage('');
+    if (!email.trim() || !password) {
+      setErrorMessage('Please enter both email and password.');
+      return;
+    }
+    setLoading(true);
     try {
-      await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) {
+        setErrorMessage(error.message);
+      }
     } catch (error) {
-      console.log(error);
+      setErrorMessage(error instanceof Error ? error.message : 'Unexpected error');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const forgotPassword = async () => {
+    if (!email.trim()) {
+      setErrorMessage('Enter your email above, then tap Forgot password.');
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+    Alert.alert('Check your email', 'If an account exists for that address, a reset link has been sent.');
+  };
+
+  const loginWithProvider = async (provider: 'google' | 'apple') => {
+    if (loading || oauthLoading) return;
+    setErrorMessage('');
+    setOauthLoading(provider);
+    try {
+      const result = await signInWithOAuthProvider(provider);
+      if (result.cancelled) return;
+      if (!result.session) {
+        setErrorMessage('Sign-in did not complete. Please try again.');
+      }
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Social sign-in failed');
+    } finally {
+      setOauthLoading(null);
+    }
+  };
+
+  const busy = loading || oauthLoading !== null;
+
   return (
-    <View style={styles.root}>
+    <Pressable style={styles.root} onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView style={styles.inner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.brandBlock}>
           <Text style={styles.appName}>ShelfSpot</Text>
-          <Text style={styles.tagline}>Discover snacks near you</Text>
+          <Text style={styles.tagline}>Find collectible cards near you</Text>
         </View>
 
         <View style={styles.card}>
@@ -44,7 +100,13 @@ export default function LoginScreen({ onGoToSignup }: { onGoToSignup?: () => voi
               autoCapitalize="none"
               keyboardType="email-address"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (errorMessage) setErrorMessage('');
+              }}
+              caretHidden={false}
+              selectionColor={COLORS.accent}
+              cursorColor={COLORS.accent}
             />
           </View>
 
@@ -55,24 +117,70 @@ export default function LoginScreen({ onGoToSignup }: { onGoToSignup?: () => voi
               placeholderTextColor={COLORS.textSecondary}
               secureTextEntry
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errorMessage) setErrorMessage('');
+              }}
+              caretHidden={false}
+              selectionColor={COLORS.accent}
+              cursorColor={COLORS.accent}
             />
           </View>
 
-          <TouchableOpacity style={styles.primaryBtn} onPress={login}>
-            <Text style={styles.primaryBtnText}>Log In</Text>
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+
+          <TouchableOpacity style={styles.primaryBtn} onPress={login} disabled={busy}>
+            <Text style={styles.primaryBtnText}>{loading ? 'Logging in…' : 'Log In'}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.ghostBtn} onPress={onGoToSignup}>
+          <TouchableOpacity style={styles.linkBtn} onPress={forgotPassword} disabled={busy}>
+            <Text style={styles.linkBtnText}>Forgot password?</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or continue with</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.socialRow}>
+            <TouchableOpacity
+              style={[styles.socialBtn, styles.googleBtn]}
+              onPress={() => loginWithProvider('google')}
+              disabled={busy}
+              activeOpacity={0.85}
+            >
+              <AntDesign name="google" size={18} color="#FFFFFF" />
+              <Text style={styles.googleBtnText}>
+                {oauthLoading === 'google' ? 'Opening…' : 'Google'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.socialBtn, styles.appleBtn]}
+              onPress={() => loginWithProvider('apple')}
+              disabled={busy}
+              activeOpacity={0.85}
+            >
+              <AntDesign name="apple" size={18} color={appleContentColor} />
+              <Text style={[styles.appleBtnText, { color: appleContentColor }]}>
+                {oauthLoading === 'apple' ? 'Opening…' : 'Apple'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.ghostBtn} onPress={onGoToSignup} disabled={busy}>
             <Text style={styles.ghostBtnText}>Create an account</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -102,7 +210,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#C0784A',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -127,6 +235,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
   },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 13,
+    marginBottom: 10,
+    lineHeight: 18,
+  },
   primaryBtn: {
     backgroundColor: COLORS.accent,
     borderRadius: 12,
@@ -135,16 +249,71 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   primaryBtnText: {
-    color: '#FFFFFF',
+    color: COLORS.onAccent,
     fontWeight: '700',
     fontSize: 15,
     letterSpacing: 0.3,
+  },
+  linkBtn: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  linkBtnText: {
+    color: COLORS.accent,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+    marginTop: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  socialRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  socialBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 13,
+  },
+  googleBtn: {
+    backgroundColor: COLORS.google,
+  },
+  appleBtn: {
+    backgroundColor: COLORS.apple,
+  },
+  googleBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  appleBtnText: {
+    fontWeight: '700',
+    fontSize: 14,
   },
   ghostBtn: {
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 2,
     borderWidth: 1.5,
     borderColor: COLORS.border,
   },

@@ -1,63 +1,94 @@
-import { useEffect, useState } from 'react';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Post from '../components/post';
-import { getCurrentUser, getDisplayName } from '../lib/auth';
-import { formatPostTime, mapPost, type AppPost } from '../lib/posts';
+import { getCurrentUser } from '../lib/auth';
+import { enrichPostsWithProfiles, formatPostTime, mapPost, type AppPost } from '../lib/posts';
+import { useThemeColors, type AppColors } from '../lib/theme';
 import { supabase } from '../Supabaseconfig';
-
-
-const COLORS = {
-  background: '#FAF7F2',
-  card: '#FFFFFF',
-  accent: '#C0784A',
-  accentLight: '#F5EDE4',
-  text: '#2C1A0E',
-  textSecondary: '#8C7B6E',
-  border: '#E8DDD4',
-  inputBg: '#FDF9F5',
-};
 
 type HeaderProps = {
   postCount: number;
   followingCount: number;
   initials: string;
   displayName: string;
+  avatarUrl: string | null;
   onBack: () => void;
+  showFollow: boolean;
   following: boolean;
-  updateFollowing: () => void;
-  currentDisplayName: string;
+  onFollowToggle: () => void;
 };
 
-const Header = ({ postCount, followingCount, initials, displayName, onBack, following, updateFollowing, currentDisplayName }: HeaderProps) => (
-  <View style={styles.header}>
-    <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.6}>
-      <Text style={styles.backText}>← Back</Text>
-    </TouchableOpacity>
-    <View style={styles.avatarRow}>
-      <View style={styles.centerSection}>
-        <Avatar.Text size={90} label={initials} style={styles.avatar} color="#fff" />
-        <Text style={styles.name}>{displayName}</Text>
+const Header = ({
+  postCount,
+  followingCount,
+  initials,
+  displayName,
+  avatarUrl,
+  onBack,
+  showFollow,
+  following,
+  onFollowToggle,
+}: HeaderProps) => {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
+  return (
+    <View style={styles.header}>
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          onPress={onBack}
+          activeOpacity={0.7}
+          style={styles.iconBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <AntDesign name="left" size={20} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.screenTitle}>Profile</Text>
+        <View style={styles.iconBtnPlaceholder} />
       </View>
-      <View style={styles.stats}>
-        <View style={styles.stat}>
-          <Text style={{ color: '#000000', fontWeight: '600' }}>Snacks: {postCount}</Text>
+
+      <View style={styles.identity}>
+        {avatarUrl ? (
+          <Avatar.Image size={88} source={{ uri: avatarUrl }} />
+        ) : (
+          <Avatar.Text size={88} label={initials} style={styles.avatar} color={COLORS.onAccent} />
+        )}
+        <Text style={styles.name}>{displayName}</Text>
+
+        {showFollow ? (
+          <TouchableOpacity
+            onPress={onFollowToggle}
+            activeOpacity={0.8}
+            style={[styles.followBtn, following && styles.followBtnActive]}
+          >
+            <Text style={[styles.followBtnText, following && styles.followBtnTextActive]}>
+              {following ? 'Following' : 'Follow'}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      <View style={styles.statsRow}>
+        <View style={styles.statBlock}>
+          <Text style={styles.statNum}>{postCount}</Text>
+          <Text style={styles.statLabel}>Posts</Text>
         </View>
-        <View style={styles.stat}>
-          <Text style={{ color: '#000000', fontWeight: '600' }}>Taste Buds: {followingCount}</Text>
+        <View style={styles.statDivider} />
+        <View style={styles.statBlock}>
+          <Text style={styles.statNum}>{followingCount}</Text>
+          <Text style={styles.statLabel}>Followers</Text>
         </View>
-        <View style={styles.stat}>
-          {displayName !== currentDisplayName && (
-            <TouchableOpacity onPress={updateFollowing} activeOpacity={0.7} style={{ marginTop: 8, backgroundColor: COLORS.accent, paddingVertical: 6, paddingHorizontal: 16, borderRadius: 20 }}>
-              <Text style={{ color: '#fff', fontWeight: '600' }}>{following ? 'Unfollow' : 'Follow'}</Text>
-            </TouchableOpacity>
-          )}
-          </View>
+      </View>
+
+      <View style={styles.sectionLabelRow}>
+        <Text style={styles.sectionLabel}>Posts</Text>
       </View>
     </View>
-  </View>
-);
+  );
+};
 
 type ViewUserProfileScreenProps = {
   userId: string;
@@ -65,13 +96,16 @@ type ViewUserProfileScreenProps = {
 };
 
 export default function ViewUserProfileScreen({ userId, onBack }: ViewUserProfileScreenProps) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [posts, setPosts] = useState<AppPost[]>([]);
   const insets = useSafeAreaInsets();
   const [following, setFollowing] = useState(false);
   const [followingCount, setFollowingCount] = useState(0);
-  const [currentDisplayName, setCurrentDisplayName] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -79,13 +113,14 @@ export default function ViewUserProfileScreen({ userId, onBack }: ViewUserProfil
     const fetchProfile = async () => {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('id, display_name, email')
+        .select('id, display_name, email, avatar_url')
         .eq('id', userId)
         .maybeSingle();
 
       if (profile) {
         setTargetUserId(profile.id);
         setProfileDisplayName(profile.display_name || profile.email.split('@')[0]);
+        setAvatarUrl(profile.avatar_url || null);
       }
     };
 
@@ -99,12 +134,12 @@ export default function ViewUserProfileScreen({ userId, onBack }: ViewUserProfil
       const currentUser = await getCurrentUser();
       if (!currentUser || !targetUserId) return;
 
-      setCurrentDisplayName(getDisplayName(currentUser));
+      setCurrentUserId(currentUser.id);
 
       const { count } = await supabase
         .from('following')
         .select('*', { count: 'exact', head: true })
-        .eq('follower_id', currentUser.id);
+        .eq('followed_id', targetUserId);
       setFollowingCount(count ?? 0);
 
       const { data } = await supabase
@@ -149,12 +184,14 @@ export default function ViewUserProfileScreen({ userId, onBack }: ViewUserProfil
         .eq('follower_id', currentUser.id)
         .eq('followed_id', targetUserId);
       setFollowing(false);
+      setFollowingCount((count) => Math.max(0, count - 1));
     } else {
       await supabase.from('following').insert({
         follower_id: currentUser.id,
         followed_id: targetUserId,
       });
       setFollowing(true);
+      setFollowingCount((count) => count + 1);
     }
   };
 
@@ -163,13 +200,13 @@ export default function ViewUserProfileScreen({ userId, onBack }: ViewUserProfil
 
     const fetchPosts = async () => {
       const { data } = await supabase.from('posts').select('*').eq('user_id', targetUserId);
-      if (data) setPosts(data.map(mapPost));
+      if (data) setPosts(await enrichPostsWithProfiles(data.map(mapPost)));
     };
     fetchPosts();
   }, [targetUserId]);
 
-  const initials = profileDisplayName.slice(0, 2).toUpperCase();
-
+  const initials = (profileDisplayName || '??').slice(0, 2).toUpperCase();
+  const showFollow = !!currentUserId && !!targetUserId && currentUserId !== targetUserId;
 
   return (
     <FlatList
@@ -181,47 +218,165 @@ export default function ViewUserProfileScreen({ userId, onBack }: ViewUserProfil
           postCount={posts.length}
           followingCount={followingCount}
           initials={initials}
-          displayName={profileDisplayName}
+          displayName={profileDisplayName || 'Unknown'}
+          avatarUrl={avatarUrl}
           onBack={onBack}
+          showFollow={showFollow}
           following={following}
-          updateFollowing={handleFollowToggle}
-          currentDisplayName={currentDisplayName}
+          onFollowToggle={handleFollowToggle}
         />
       }
       contentContainerStyle={[styles.listContent, { paddingTop: insets.top }]}
+      ListEmptyComponent={
+        <View style={styles.empty}>
+          <Text style={styles.emptyText}>No posts yet</Text>
+        </View>
+      }
       renderItem={({ item }) => (
         <Post
           author={item.author ?? 'Unknown'}
           userId={item.user_id}
+          avatarUrl={item.avatarUrl}
           time={formatPostTime(item.time)}
           item={item.item}
           description={item.description}
           address={item.address}
           image={item.imageURL}
           postId={item.id}
+          reliabilityScore={item.reliabilityScore}
+          inStockVotes={item.inStockVotes}
+          soldOutVotes={item.soldOutVotes}
+          myVote={item.myVote}
         />
       )}
     />
   );
 }
 
-const styles = StyleSheet.create({
-  list: { backgroundColor: COLORS.background },
-  listContent: { backgroundColor: COLORS.background, paddingBottom: 20 },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 0, backgroundColor: COLORS.background },
-  backButton: { marginBottom: 8 },
-  backText: { fontSize: 15, color: COLORS.accent, fontWeight: '600' },
-  avatarRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24, marginBottom: 14 },
-  centerSection: { alignItems: 'center', flex: 0 },
-  avatar: { backgroundColor: COLORS.accent },
-  stats: { flexDirection: 'column', gap: 8, justifyContent: 'flex-start', alignItems: 'flex-end' },
-  stat: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
-  statNum: { fontWeight: 'bold', fontSize: 16, color: COLORS.text, marginLeft: 4 },
-  statLabel: { fontSize: 13, color: COLORS.textSecondary },
-  name: { fontWeight: 'bold', fontSize: 16, marginTop: 8, color: COLORS.text },
-  tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: COLORS.border, marginTop: 16 },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 10 },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: COLORS.accent },
-  tabText: { fontSize: 14, color: COLORS.textSecondary },
-  tabTextActive: { color: COLORS.accent, fontWeight: 'bold' },
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
+  list: {
+    backgroundColor: COLORS.background,
+  },
+  listContent: {
+    backgroundColor: COLORS.background,
+    paddingBottom: 20,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+    backgroundColor: COLORS.background,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  identity: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  avatar: {
+    backgroundColor: COLORS.accent,
+  },
+  name: {
+    fontWeight: '700',
+    fontSize: 20,
+    marginTop: 12,
+    color: COLORS.text,
+    letterSpacing: -0.2,
+  },
+  followBtn: {
+    marginTop: 14,
+    backgroundColor: COLORS.accent,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+  },
+  followBtnActive: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  followBtnText: {
+    color: COLORS.onAccent,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  followBtnTextActive: {
+    color: COLORS.text,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingVertical: 14,
+    marginBottom: 18,
+  },
+  statBlock: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  statDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: COLORS.border,
+  },
+  statNum: {
+    fontWeight: '800',
+    fontSize: 18,
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+  sectionLabelRow: {
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  empty: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
 });

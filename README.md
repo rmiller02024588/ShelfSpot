@@ -1,11 +1,11 @@
 # ShelfSpot
 
 ## Overview
-Tired of not being able to find your favorite niche snacks in the store?
+Tired of missing out on rare trading cards at stores near you?
 
-Try ShelfSpot, a crowd-sourced mobile platform for finding niche and limited-time food and drink products in stores near you. It's built for niche snack enthusiasts who are tired of visiting multiple stores based on outdated inventory information.
+Try ShelfSpot, a crowd-sourced mobile platform for finding collectible cards — Pokemon, sports, Magic (MTG), and more — in stores near you. Post sightings with a store location, photo, and description so other collectors can track them down.
 
-Users can post sightings of niche and limited-time items; each post includes the store location, a photo, and a description, so that other users can find these niche items. Posts are shown through a location-based feed, a keyword search, and an interactive map, making it easy to find exactly what you're looking for.
+Posts show up in a location-based feed, keyword search, and interactive map, making it easy to find the cards you're looking for.
 
 ## Tech Stack
 
@@ -56,8 +56,9 @@ Fill in `.env` with your Google Maps API key and Supabase credentials (`EXPO_PUB
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. In the SQL editor, run the schema in `supabase/schema.sql`.
-3. Under **Authentication → Providers**, enable Email sign-in.
-4. Copy your project URL and anon key into `.env`.
+3. Under **Authentication → Providers**, enable Email, Google, and Apple sign-in.
+4. Under **Authentication → URL Configuration**, add redirect URL `ShelfSpot://**` (and your Expo Go redirect if testing in Expo Go).
+5. Copy your project URL and anon key into `.env`.
 
 ## Running the App
 

@@ -1,43 +1,64 @@
-import React, { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import React, { useMemo, useState } from "react";
+import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { getPasswordStrengthError, isValidEmail } from "../lib/auth";
+import { useThemeColors, type AppColors } from "../lib/theme";
 import { supabase } from "../Supabaseconfig";
 
-const COLORS = {
-  background:    '#FAF7F2',
-  card:          '#FFFFFF',
-  accent:        '#C0784A',
-  accentLight:   '#F5EDE4',
-  text:          '#2C1A0E',
-  textSecondary: '#8C7B6E',
-  border:        '#E8DDD4',
-  inputBg:       '#FDF9F5',
-};
-
 export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void }) {
+  const COLORS = useThemeColors();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
   const [displayName, setDisplayName] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const makeAccount = async () => {
     if (loading) return;
-    if (!email.trim() || !password || !displayName.trim()) {
-      Alert.alert('Missing fields', 'Please enter an email, password, and display name.');
+    setErrorMessage("");
+
+    if (!email.trim() || !password || !confirmPassword || !displayName.trim()) {
+      setErrorMessage('Please enter an email, password, and display name.');
       return;
     }
+    if (!isValidEmail(email)) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+    const passwordError = getPasswordStrengthError(password);
+    if (passwordError) {
+      setErrorMessage(passwordError);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+
     setLoading(true);
     try {
+      const trimmedName = displayName.trim();
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          data: { display_name: displayName.trim() },
+          data: { display_name: trimmedName },
         },
       });
       if (error) {
-        Alert.alert('Sign up failed', error.message);
+        setErrorMessage(error.message);
         return;
       }
+
+      // Keep public profiles in sync when signup returns an active session.
+      if (data.user && data.session) {
+        await supabase
+          .from('profiles')
+          .update({ display_name: trimmedName })
+          .eq('id', data.user.id);
+      }
+
       if (!data.session) {
         Alert.alert(
           'Check your email',
@@ -45,18 +66,18 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
         );
       }
     } catch (error) {
-      Alert.alert('Sign up failed', error instanceof Error ? error.message : 'Unexpected error');
+      setErrorMessage(error instanceof Error ? error.message : 'Unexpected error');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.root}>
+    <Pressable style={styles.root} onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView style={styles.inner} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.brandBlock}>
           <Text style={styles.appName}>ShelfSpot</Text>
-          <Text style={styles.tagline}>Start sharing your snack discoveries</Text>
+          <Text style={styles.tagline}>Start sharing card finds near you</Text>
         </View>
 
         <View style={styles.card}>
@@ -70,7 +91,13 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
               autoCapitalize="none"
               keyboardType="email-address"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (errorMessage) setErrorMessage('');
+              }}
+              caretHidden={false}
+              selectionColor={COLORS.accent}
+              cursorColor={COLORS.accent}
             />
           </View>
 
@@ -81,24 +108,58 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
               placeholderTextColor={COLORS.textSecondary}
               secureTextEntry
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errorMessage) setErrorMessage('');
+              }}
+              caretHidden={false}
+              selectionColor={COLORS.accent}
+              cursorColor={COLORS.accent}
             />
+            <Text style={styles.hintText}>
+              8+ characters with upper, lower, number, and special character
+            </Text>
           </View>
 
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm password"
+              placeholderTextColor={COLORS.textSecondary}
+              secureTextEntry
+              value={confirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                if (errorMessage) setErrorMessage('');
+              }}
+              caretHidden={false}
+              selectionColor={COLORS.accent}
+              cursorColor={COLORS.accent}
+            />
+          </View>
 
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
               placeholder="Display Name"
               placeholderTextColor={COLORS.textSecondary}
-              
               value={displayName}
-              onChangeText={setDisplayName}
+              onChangeText={(text) => {
+                setDisplayName(text);
+                if (errorMessage) setErrorMessage('');
+              }}
+              caretHidden={false}
+              selectionColor={COLORS.accent}
+              cursorColor={COLORS.accent}
             />
           </View>
 
-          <TouchableOpacity style={styles.primaryBtn} onPress={makeAccount}>
-            <Text style={styles.primaryBtnText}>Create Account</Text>
+          {errorMessage ? (
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          ) : null}
+
+          <TouchableOpacity style={styles.primaryBtn} onPress={makeAccount} disabled={loading}>
+            <Text style={styles.primaryBtnText}>{loading ? 'Creating…' : 'Create Account'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.ghostBtn} onPress={onGoToLogin}>
@@ -106,11 +167,11 @@ export default function SignUpScreen({ onGoToLogin }: { onGoToLogin?: () => void
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -140,7 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#C0784A',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
@@ -165,6 +226,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
   },
+  hintText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    lineHeight: 16,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 13,
+    marginBottom: 10,
+    lineHeight: 18,
+  },
   primaryBtn: {
     backgroundColor: COLORS.accent,
     borderRadius: 12,
@@ -173,7 +246,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   primaryBtnText: {
-    color: '#FFFFFF',
+    color: COLORS.onAccent,
     fontWeight: '700',
     fontSize: 15,
     letterSpacing: 0.3,

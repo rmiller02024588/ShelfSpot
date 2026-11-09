@@ -1,9 +1,11 @@
 import MinPostCard from '@/components/minPost';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Location from 'expo-location';
 import type { User } from '@supabase/supabase-js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { Appbar } from 'react-native-paper';
 import StoreMarker from '../components/storeMarker';
 import { onAuthStateChanged } from '../lib/auth';
 import { enrichPostsWithProfiles, formatPostTime, mapPost, type AppPost } from '../lib/posts';
@@ -88,7 +90,27 @@ export default function MapScreen() {
     const [posts, setPosts] = useState<AppPost[]>([]);
     const [location, setLocation] = useState<[number, number]>([defaultLatitude, defaultLongitude]);
     const [tracksViewChanges, setTracksViewChanges] = useState(true);
+    const [recentering, setRecentering] = useState(false);
     const mapRef = useRef<MapView>(null);
+
+    const recenterOnUser = async () => {
+        if (recentering) return;
+        setRecentering(true);
+        try {
+            const [lat, lon] = await getUserLocation();
+            const nextLat = lat ?? defaultLatitude;
+            const nextLon = lon ?? defaultLongitude;
+            setLocation([nextLat, nextLon]);
+            mapRef.current?.animateToRegion?.({
+                latitude: nextLat,
+                longitude: nextLon,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            });
+        } finally {
+            setRecentering(false);
+        }
+    };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged((u) => setCurrentUser(u));
@@ -141,78 +163,96 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
+      <Appbar.Header style={styles.header} elevated={false}>
+        <Appbar.Content title="Map" titleStyle={styles.headerTitle} />
+      </Appbar.Header>
+
+      <View style={styles.mapWrap}>
         <MapView
-        ref={mapRef}
-        style={styles.map}
-        showsUserLocation={true}
-        initialRegion={{
+          ref={mapRef}
+          style={styles.map}
+          showsUserLocation={true}
+          initialRegion={{
             latitude: location[0],
             longitude: location[1],
             latitudeDelta: 0.05,
             longitudeDelta: 0.05,
-        }}>
-            {groupedStores.map((store) => (
-                <Marker
-                    key={store.address}
-                    coordinate={{
-                        latitude: store.coordinates.latitude,
-                        longitude: store.coordinates.longitude
-                    }}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    tracksViewChanges={tracksViewChanges}
-                    stopPropagation
-                    tappable
-                    onPress={(event) => {
-                        event.stopPropagation?.();
-                        setSelectedStore(store);
-                    }}
-                >
-                    <StoreMarker count={store.posts.length} />
-                </Marker>
-            ))}
-        </MapView>
-        <Modal
-            visible={!!selectedStore}
-            animationType="slide"
-            transparent
-            onRequestClose={() => setSelectedStore(null)}
+          }}
         >
-            <View style={styles.modalRoot}>
-                <Pressable style={styles.modalBackdrop} onPress={() => setSelectedStore(null)} />
-                <View style={styles.modalSheet}>
-                    <Text style={styles.modalTitle}>
-                        {selectedStore?.address}
-                    </Text>
+          {groupedStores.map((store) => (
+            <Marker
+              key={store.address}
+              coordinate={{
+                latitude: store.coordinates.latitude,
+                longitude: store.coordinates.longitude,
+              }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={tracksViewChanges}
+              stopPropagation
+              tappable
+              onPress={(event) => {
+                event.stopPropagation?.();
+                setSelectedStore(store);
+              }}
+            >
+              <StoreMarker count={store.posts.length} />
+            </Marker>
+          ))}
+        </MapView>
 
-                    <FlatList
-                            data={selectedStore?.posts ?? []}
-                            keyExtractor={(item) => item.id}
-                            style={styles.modalList}
-                            renderItem={({ item }) => (
-                            <MinPostCard
-                                author={item.author}
-                                userId={item.user_id}
-                                avatarUrl={item.avatarUrl}
-                                time={formatPostTime(item.time)}
-                                item={item.item}
-                                description={item.description}
-                                address={item.address}
-                                image={item.imageURL}
-                                postId={item.id}
-                                reliabilityScore={item.reliabilityScore}
-                                inStockVotes={item.inStockVotes}
-                                soldOutVotes={item.soldOutVotes}
-                                myVote={item.myVote}
-                            />
-                            )}
-                    />
+        <TouchableOpacity
+          style={styles.recenterButton}
+          onPress={recenterOnUser}
+          activeOpacity={0.85}
+          accessibilityLabel="Recenter map on my location"
+          disabled={recentering}
+        >
+          <MaterialIcons name="my-location" size={22} color={COLORS.accent} />
+        </TouchableOpacity>
+      </View>
 
-                    <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedStore(null)}>
-                        <Text style={styles.closeButtonText}>Close</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </Modal>
+      <Modal
+        visible={!!selectedStore}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedStore(null)}
+      >
+        <View style={styles.modalRoot}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setSelectedStore(null)} />
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>
+              {selectedStore?.address}
+            </Text>
+
+            <FlatList
+              data={selectedStore?.posts ?? []}
+              keyExtractor={(item) => item.id}
+              style={styles.modalList}
+              renderItem={({ item }) => (
+                <MinPostCard
+                  author={item.author}
+                  userId={item.user_id}
+                  avatarUrl={item.avatarUrl}
+                  time={formatPostTime(item.time)}
+                  item={item.item}
+                  description={item.description}
+                  address={item.address}
+                  image={item.imageURL}
+                  postId={item.id}
+                  reliabilityScore={item.reliabilityScore}
+                  inStockVotes={item.inStockVotes}
+                  soldOutVotes={item.soldOutVotes}
+                  myVote={item.myVote}
+                />
+              )}
+            />
+
+            <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedStore(null)}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -220,10 +260,42 @@ export default function MapScreen() {
 const createStyles = (COLORS: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.background,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    elevation: 0,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  mapWrap: {
+    flex: 1,
   },
   map: {
     width: '100%',
     height: '100%',
+  },
+  recenterButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 4,
   },
   modalRoot: {
     flex: 1,

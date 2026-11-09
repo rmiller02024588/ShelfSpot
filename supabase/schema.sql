@@ -12,6 +12,7 @@ alter table public.profiles add column if not exists avatar_url text;
 -- Must be SECURITY DEFINER with a pinned search_path so auth (supabase_auth_admin)
 -- can insert into public.profiles during signup. Unqualified names break when
 -- search_path is empty, which causes "Database error saving new user".
+-- OAuth (Google/Apple) may omit email or use full_name instead of display_name.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -19,8 +20,24 @@ security definer
 set search_path = ''
 as $$
 begin
-  insert into public.profiles (id, email, display_name)
-  values (new.id, new.email, new.raw_user_meta_data->>'display_name');
+  insert into public.profiles (id, email, display_name, avatar_url)
+  values (
+    new.id,
+    coalesce(new.email, new.id::text || '@users.noreply'),
+    coalesce(
+      new.raw_user_meta_data->>'display_name',
+      new.raw_user_meta_data->>'full_name',
+      new.raw_user_meta_data->>'name'
+    ),
+    coalesce(
+      new.raw_user_meta_data->>'avatar_url',
+      new.raw_user_meta_data->>'picture'
+    )
+  )
+  on conflict (id) do update set
+    email = excluded.email,
+    display_name = coalesce(excluded.display_name, public.profiles.display_name),
+    avatar_url = coalesce(excluded.avatar_url, public.profiles.avatar_url);
   return new;
 end;
 $$;
@@ -32,6 +49,7 @@ create trigger on_auth_user_created
 
 alter table public.profiles enable row level security;
 drop policy if exists "Profiles are viewable by everyone" on public.profiles;
+drop policy if exists "Users can insert own profile" on public.profiles;
 drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Profiles are viewable by everyone" on public.profiles for select using (true);
 create policy "Users can insert own profile" on public.profiles for insert with check (auth.uid() = id);
@@ -138,6 +156,33 @@ drop policy if exists "Authenticated users can update images" on storage.objects
 create policy "Authenticated users can update images"
   on storage.objects for update
   using (bucket_id = 'images' and auth.role() = 'authenticated');
+
+-- Allow the signed-in user to permanently delete their account + related data.
+-- Runs as SECURITY DEFINER so it can remove the auth.users row.
+create or replace function public.delete_own_account()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  delete from public.stock_votes where user_id = uid;
+  delete from public.saved_posts where user_id = uid;
+  delete from public.following where follower_id = uid or followed_id = uid;
+  delete from public.posts where user_id = uid;
+  delete from public.profiles where id = uid;
+  delete from auth.users where id = uid;
+end;
+$$;
+
+revoke all on function public.delete_own_account() from public;
+grant execute on function public.delete_own_account() to authenticated;
 
 -- Realtime (ignore if already added)
 do $$ begin

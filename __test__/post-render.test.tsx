@@ -2,7 +2,12 @@ import { render } from '@testing-library/react-native';
 import React from 'react';
 
 jest.mock('../lib/auth', () => ({
-  getCurrentUser: jest.fn(() => Promise.resolve(null)),
+  getCurrentUser: jest.fn(() => Promise.resolve({ id: 'owner-uid' })),
+}));
+
+jest.mock('../lib/posts', () => ({
+  ...jest.requireActual('../lib/posts'),
+  deletePost: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 jest.mock('../Supabaseconfig', () => ({

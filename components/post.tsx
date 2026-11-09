@@ -1,10 +1,10 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useProfileNav } from '../context/ProfileNavContext';
 import { getCurrentUser } from '../lib/auth';
-import type { StockVote } from '../lib/posts';
+import { deletePost, type StockVote } from '../lib/posts';
 import { useThemeColors, type AppColors } from '../lib/theme';
 import { supabase } from '../Supabaseconfig';
 import ReliabilityVote from './reliabilityVote';
@@ -43,6 +43,9 @@ export default function PostCard({
   const COLORS = useThemeColors();
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [saved, setSaved] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { onViewProfile } = useProfileNav();
 
   useEffect(() => {
@@ -51,6 +54,7 @@ export default function PostCard({
     const setup = async () => {
       const user = await getCurrentUser();
       if (!user) return;
+      setIsOwner(user.id === userId);
 
       const checkSaved = async () => {
         const { data } = await supabase
@@ -77,7 +81,7 @@ export default function PostCard({
 
     setup();
     return () => { if (channel) supabase.removeChannel(channel); };
-  }, [postId]);
+  }, [postId, userId]);
 
   const handleSavePress = async () => {
     const user = await getCurrentUser();
@@ -104,6 +108,30 @@ export default function PostCard({
     }
   };
 
+  const handleDeletePress = () => {
+    Alert.alert(
+      'Delete post',
+      'Are you sure you want to delete this post? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            const result = await deletePost(postId);
+            setDeleting(false);
+            if (!result.ok) {
+              Alert.alert('Error', result.error || 'Failed to delete post');
+              return;
+            }
+            setDeleted(true);
+          },
+        },
+      ],
+    );
+  };
+
   const initials = author
     ? author
       .split(' ')
@@ -112,6 +140,8 @@ export default function PostCard({
       .toUpperCase()
       .slice(0, 2)
     : 'U';
+
+  if (deleted) return null;
 
   return (
     <View style={styles.card}>
@@ -142,17 +172,34 @@ export default function PostCard({
               <Text style={styles.timeText}>{time}</Text>
             </View>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleSavePress}
-            style={styles.saveButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons
-              name={saved ? 'bookmark' : 'bookmark-outline'}
-              size={20}
-              color={saved ? COLORS.accent : COLORS.border}
-            />
-          </TouchableOpacity>
+          <View style={styles.actionButtons}>
+            {isOwner ? (
+              <TouchableOpacity
+                onPress={handleDeletePress}
+                style={styles.saveButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                disabled={deleting}
+                accessibilityLabel="Delete post"
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={20}
+                  color={deleting ? COLORS.border : COLORS.error}
+                />
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              onPress={handleSavePress}
+              style={styles.saveButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={saved ? 'bookmark' : 'bookmark-outline'}
+                size={20}
+                color={saved ? COLORS.accent : COLORS.border}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Text style={styles.itemName}>{item}</Text>
@@ -255,6 +302,11 @@ const createStyles = (COLORS: AppColors) => StyleSheet.create({
   timeText: {
     fontSize: 11,
     color: COLORS.textSecondary,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   saveButton: {
     padding: 2,

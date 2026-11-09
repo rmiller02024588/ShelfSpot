@@ -281,6 +281,25 @@ export function filterPostsWithinMiles(
   });
 }
 
+/** Delete a post owned by the current user. Returns true on success. */
+export async function deletePost(postId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: 'Not signed in' };
+
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Error deleting post:', error);
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
 export function formatPostTime(time: string): string {
   const date = new Date(time);
   if (Number.isNaN(date.getTime())) return time;

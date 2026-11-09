@@ -1,10 +1,12 @@
 import FollowingScreen from "@/app/followingScreen";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { User } from "@supabase/supabase-js";
-import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { BottomNavigation, PaperProvider } from "react-native-paper";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { PaperProvider } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { onAuthStateChanged } from "../lib/auth";
-import { useThemeColors } from "../lib/theme";
+import { useThemeColors, type AppColors } from "../lib/theme";
 import HomeScreen from "../app/index";
 import LoginScreen from "../app/loginScreen";
 import MapScreen from "../app/mapScreen";
@@ -16,10 +18,18 @@ import ViewUserProfileScreen from "../app/viewUserProfileScreen";
 import { ProfileNavContext } from "../context/ProfileNavContext";
 import SignUpScreen from './../app/signUpScreen';
 
+type TabRoute = {
+  key: string;
+  title: string;
+  focusedIcon: keyof typeof MaterialCommunityIcons.glyphMap;
+  unfocusedIcon: keyof typeof MaterialCommunityIcons.glyphMap;
+  testID: string;
+};
 
 export default function AuthGate() {
-
   const COLORS = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [index, setIndex] = useState(0);
@@ -31,12 +41,12 @@ export default function AuthGate() {
 
   const prevUidRef = useRef<string | null | undefined>(undefined);
 
-  const [routes] = useState([
+  const routes: TabRoute[] = [
     { key: 'home', title: 'Home', focusedIcon: 'home', unfocusedIcon: 'home-outline', testID: 'HomeScreen' },
     { key: 'search', title: 'Search', focusedIcon: 'magnify', unfocusedIcon: 'magnify', testID: 'SearchScreen' },
     { key: 'map', title: 'Map', focusedIcon: 'map', unfocusedIcon: 'map-outline', testID: 'MapScreen' },
     { key: 'profile', title: 'Profile', focusedIcon: 'account-cowboy-hat', unfocusedIcon: 'account-cowboy-hat-outline', testID: 'ProfileScreen' },
-  ]);
+  ];
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged((authUser) => {
@@ -72,54 +82,139 @@ export default function AuthGate() {
   }
 
   if (showPostScreen) {
-    return <PostScreen onBack={() => setShowPostScreen(false)} />;
+    return (
+      <PaperProvider>
+        <PostScreen onBack={() => setShowPostScreen(false)} />
+      </PaperProvider>
+    );
   }
 
   if (showSettingsScreen) {
-    return <SettingsScreen onBack={() => setShowSettingsScreen(false)} />;
+    return (
+      <PaperProvider>
+        <SettingsScreen onBack={() => setShowSettingsScreen(false)} />
+      </PaperProvider>
+    );
   }
 
   if (showFollowingScreen) {
     return (
-      <ProfileNavContext.Provider value={{
-        onViewProfile: (userId) => {
-          setShowFollowingScreen(false);
-          setViewingUserId(userId);
-        }
-      }}>
-        <FollowingScreen onBack={() => setShowFollowingScreen(false)} />
-      </ProfileNavContext.Provider>
+      <PaperProvider>
+        <ProfileNavContext.Provider value={{
+          onViewProfile: (userId) => {
+            setShowFollowingScreen(false);
+            setViewingUserId(userId);
+          }
+        }}>
+          <FollowingScreen onBack={() => setShowFollowingScreen(false)} />
+        </ProfileNavContext.Provider>
+      </PaperProvider>
     );
   }
 
   if (viewingUserId) {
-    return <ViewUserProfileScreen userId={viewingUserId} onBack={() => setViewingUserId(null)} />;
+    return (
+      <PaperProvider>
+        <ViewUserProfileScreen userId={viewingUserId} onBack={() => setViewingUserId(null)} />
+      </PaperProvider>
+    );
   }
 
-  const renderScene = BottomNavigation.SceneMap({
-    home: () => <HomeScreen onAddPost={() => setShowPostScreen(true)} />,
-    search: () => <SearchScreen />,
-    map: () => <MapScreen />,
-    profile: () => <ProfileScreen onGoToSettings={() => setShowSettingsScreen(true)}
-      onGoToFollowing={() => setShowFollowingScreen(true)} />,
-  });
+  let activeScene: React.ReactNode = null;
+  if (index === 0) {
+    activeScene = <HomeScreen onAddPost={() => setShowPostScreen(true)} />;
+  } else if (index === 1) {
+    activeScene = <SearchScreen />;
+  } else if (index === 2) {
+    activeScene = <MapScreen />;
+  } else if (index === 3) {
+    activeScene = (
+      <ProfileScreen
+        onGoToSettings={() => setShowSettingsScreen(true)}
+        onGoToFollowing={() => setShowFollowingScreen(true)}
+      />
+    );
+  }
 
   return (
     <ProfileNavContext.Provider value={{ onViewProfile: setViewingUserId }}>
       <PaperProvider>
-        <BottomNavigation
-          navigationState={{ index, routes }}
-          onIndexChange={setIndex}
-          renderScene={renderScene}
-          barStyle={{ backgroundColor: COLORS.card }}
-          theme={{
-            colors: {
-              secondaryContainer: COLORS.accentLight,
-              onSecondaryContainer: COLORS.accent,
-            }
-          }}
-        />
+        <View style={styles.root}>
+          <View style={styles.sceneContainer}>
+            {activeScene}
+          </View>
+
+          <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+            {routes.map((route, routeIndex) => {
+              const focused = index === routeIndex;
+              const color = focused ? COLORS.accent : COLORS.textSecondary;
+              return (
+                <Pressable
+                  key={route.key}
+                  testID={route.testID}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: focused }}
+                  accessibilityLabel={route.title}
+                  onPress={() => setIndex(routeIndex)}
+                  style={styles.tabItem}
+                >
+                  <View style={[styles.tabIconWrap, focused && styles.tabIconWrapFocused]}>
+                    <MaterialCommunityIcons
+                      name={focused ? route.focusedIcon : route.unfocusedIcon}
+                      size={22}
+                      color={color}
+                    />
+                  </View>
+                  <Text style={[styles.tabLabel, { color }]} numberOfLines={1}>
+                    {route.title}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
       </PaperProvider>
     </ProfileNavContext.Provider>
   );
 }
+
+const createStyles = (COLORS: AppColors) => StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  sceneContainer: {
+    flex: 1,
+  },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.border,
+    paddingTop: 8,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    minHeight: 48,
+  },
+  tabIconWrap: {
+    width: 56,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconWrapFocused: {
+    backgroundColor: COLORS.accentLight,
+  },
+  tabLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+});

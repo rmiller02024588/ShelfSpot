@@ -49,6 +49,7 @@ export default function HomeScreen({ onAddPost }: HomeScreenProps) {
   const [refreshing, setRefreshing] = React.useState(false);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const loadingMoreLock = useRef(false);
 
   const visiblePosts = nearbyPosts.slice(0, visibleCount);
@@ -114,41 +115,78 @@ export default function HomeScreen({ onAddPost }: HomeScreenProps) {
         />
       </Appbar.Header>
 
-      <View style={styles.filterBar}>
-        <AntDesign name="tag" size={15} color={COLORS.textSecondary} style={styles.filterIcon} />
-        <Text style={styles.filterLabel}>Filter:</Text>
-        <View style={styles.chipRow}>
-          <TouchableOpacity
-            style={[styles.filterChip, selected.length === 0 && styles.filterChipSelected]}
-            onPress={() => setSelected([])}
-            activeOpacity={0.75}
+      <View style={styles.filterContainer}>
+        <TouchableOpacity
+          style={[styles.filterToggle, selected.length > 0 && styles.filterToggleActive]}
+          onPress={() => setFiltersOpen((open) => !open)}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: filtersOpen }}
+        >
+          <AntDesign
+            name="filter"
+            size={15}
+            color={selected.length > 0 ? COLORS.onAccent : COLORS.textSecondary}
+          />
+          <Text
+            style={[
+              styles.filterToggleText,
+              selected.length > 0 && styles.filterToggleTextActive,
+            ]}
           >
-            <Text style={[styles.filterChipText, selected.length === 0 && styles.filterChipTextSelected]}>
-              All
-            </Text>
-          </TouchableOpacity>
-          {CATEGORIES.map((category) => {
-            const isSelected = selected.includes(category.value);
-            return (
-              <TouchableOpacity
-                key={category.value}
-                style={[styles.filterChip, isSelected && styles.filterChipSelected]}
-                onPress={() => {
-                  setSelected((prev) =>
-                    prev.includes(category.value)
-                      ? prev.filter((value) => value !== category.value)
-                      : [...prev, category.value]
-                  );
-                }}
-                activeOpacity={0.75}
+            {selected.length > 0 ? `Filters (${selected.length})` : 'Filters'}
+          </Text>
+          <AntDesign
+            name={filtersOpen ? 'up' : 'down'}
+            size={12}
+            color={selected.length > 0 ? COLORS.onAccent : COLORS.textSecondary}
+          />
+        </TouchableOpacity>
+
+        {filtersOpen ? (
+          <View style={styles.chipRow}>
+            <TouchableOpacity
+              style={[styles.filterChip, selected.length === 0 && styles.filterChipSelected]}
+              onPress={() => setSelected([])}
+              activeOpacity={0.75}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selected.length === 0 && styles.filterChipTextSelected,
+                ]}
               >
-                <Text style={[styles.filterChipText, isSelected && styles.filterChipTextSelected]}>
-                  {category.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                All
+              </Text>
+            </TouchableOpacity>
+            {CATEGORIES.map((category) => {
+              const isSelected = selected.includes(category.value);
+              return (
+                <TouchableOpacity
+                  key={category.value}
+                  style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+                  onPress={() => {
+                    setSelected((prev) =>
+                      prev.includes(category.value)
+                        ? prev.filter((value) => value !== category.value)
+                        : [...prev, category.value]
+                    );
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      isSelected && styles.filterChipTextSelected,
+                    ]}
+                  >
+                    {category.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
 
       <FlatList
@@ -215,27 +253,37 @@ const createStyles = (COLORS: AppColors) => StyleSheet.create({
     color: COLORS.text,
     letterSpacing: -0.3,
   },
-  filterBar: {
+  filterContainer: {
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  filterToggle: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     backgroundColor: COLORS.card,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  filterIcon: {
-    marginTop: 1,
+  filterToggleActive: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
   },
-  filterLabel: {
+  filterToggleText: {
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.textSecondary,
-    letterSpacing: 0.2,
+  },
+  filterToggleTextActive: {
+    color: COLORS.onAccent,
   },
   chipRow: {
-    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,

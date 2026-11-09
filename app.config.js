@@ -5,7 +5,7 @@ export default {
     name: "ShelfSpot",
     slug: "ShelfSpot",
     extra: {
-        eas: { projectId: "2dba6a7b-c82f-43a4-8c7f-98f479e635c6" }
+      eas: { projectId: "a95b7187-3ed9-4051-81de-fc18be38d8aa" }
     },
     version: "1.0.0",
     orientation: "portrait",
@@ -13,11 +13,18 @@ export default {
     scheme: "ShelfSpot",
     userInterfaceStyle: "automatic",
     ios: {
-      supportsTablet: true,
-      bundleIdentifier: "com.yourname.ShelfSpot",
-      config: {
-        googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY
-      }
+      supportsTablet: false,
+      bundleIdentifier: "com.camgagne.shelfspot",
+      buildNumber: "1",
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+        NSLocationWhenInUseUsageDescription:
+          "ShelfSpot uses your location to show nearby shelf spots on the map.",
+        NSCameraUsageDescription:
+          "ShelfSpot uses your camera so you can take photos for posts.",
+        NSPhotoLibraryUsageDescription:
+          "ShelfSpot accesses your photo library so you can attach photos to posts.",
+      },
     },
     android: {
       adaptiveIcon: {
@@ -27,12 +34,8 @@ export default {
         monochromeImage: "./assets/images/android-icon-monochrome.png"
       },
       predictiveBackGestureEnabled: false,
-      package: "com.yourname.ShelfSpot",
-      config: {
-        googleMaps: {
-          apiKey: process.env.GOOGLE_MAPS_API_KEY
-        }
-      }
+      package: "com.camgagne.shelfspot",
+      versionCode: 1,
     },
     web: {
       output: "static",
@@ -43,7 +46,17 @@ export default {
       [
         "expo-location",
         {
-            "locationAlwaysAndWhenInUsePermission": "Allow ShelfSpot to access your location.",
+          locationWhenInUsePermission:
+            "ShelfSpot uses your location to show nearby shelf spots on the map.",
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          cameraPermission:
+            "ShelfSpot uses your camera so you can take photos for posts.",
+          photosPermission:
+            "ShelfSpot accesses your photo library so you can attach photos to posts.",
         }
       ],
       [
@@ -56,6 +69,13 @@ export default {
           dark: {
             backgroundColor: "#000000"
           }
+        }
+      ],
+      [
+        "react-native-maps",
+        {
+          androidGoogleMapsApiKey:
+            process.env.EXPO_PUBLIC_API_KEY ?? process.env.GOOGLE_MAPS_API_KEY,
         }
       ]
     ],

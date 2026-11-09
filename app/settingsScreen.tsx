@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Appbar, Avatar } from 'react-native-paper';
-import { getAvatarUrl, getDisplayName, getPasswordStrengthError, onAuthStateChanged, syncProfileFromUser } from '../lib/auth';
+import { deleteOwnAccount, getAvatarUrl, getDisplayName, getPasswordStrengthError, onAuthStateChanged, syncProfileFromUser } from '../lib/auth';
 import { useThemeColors, type AppColors } from '../lib/theme';
 import { supabase } from '../Supabaseconfig';
 
@@ -20,6 +20,7 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged((user) => {
@@ -196,6 +197,51 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
     }
   };
 
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete account',
+      'This permanently deletes your account, posts, and saved items. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you sure?',
+              'Your account will be permanently deleted.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete Account',
+                  style: 'destructive',
+                  onPress: handleDeleteAccount,
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      const result = await deleteOwnAccount();
+      if (!result.ok) {
+        Alert.alert('Error', result.error || 'Failed to delete account');
+        return;
+      }
+      onBack?.();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      Alert.alert('Error', 'Failed to delete account');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   const renderField = (label: string, field: 'name' | 'email', readOnly = false) => (
     <View key={field} style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -321,6 +367,18 @@ export default function SettingsScreen({ onBack }: { onBack?: () => void }) {
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutTxt}>Log Out</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.deleteAccountBtn, deletingAccount && styles.btnDisabled]}
+          onPress={confirmDeleteAccount}
+          disabled={deletingAccount}
+        >
+          {deletingAccount ? (
+            <ActivityIndicator color={COLORS.error} />
+          ) : (
+            <Text style={styles.deleteAccountTxt}>Delete Account</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -363,4 +421,17 @@ const createStyles = (COLORS: AppColors) => StyleSheet.create({
   cancelTxt:     { color: COLORS.text },
   logoutBtn:     { marginTop: 20, backgroundColor: COLORS.error, borderRadius: 10, padding: 14, alignItems: 'center' },
   logoutTxt:     { color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 },
+  deleteAccountBtn: {
+    marginTop: 12,
+    marginBottom: 24,
+    backgroundColor: 'transparent',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  deleteAccountTxt: { color: COLORS.error, fontWeight: 'bold', fontSize: 16 },
 });

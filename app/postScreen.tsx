@@ -25,7 +25,13 @@ export default function PostScreen({ onBack }: PostScreenProps) {
   const [image, setImage] = useState<string | null>(null);
   const apiKey = process.env.EXPO_PUBLIC_API_KEY;
 
-  const pickImage = async () => {
+  const applyPickedImage = (result: ImagePicker.ImagePickerResult) => {
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const pickFromLibrary = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       Alert.alert('Permission required', 'Permission to access the media library is required.');
@@ -37,9 +43,30 @@ export default function PostScreen({ onBack }: PostScreenProps) {
       aspect: [4, 3],
       quality: 1,
     });
-    if (!result.canceled) {
-      setImage(result.assets[0].uri);
+    applyPickedImage(result);
+  };
+
+  const takePhoto = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted) {
+      Alert.alert('Permission required', 'Permission to use the camera is required.');
+      return;
     }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    applyPickedImage(result);
+  };
+
+  const choosePhotoSource = () => {
+    Alert.alert('Add a photo', 'Choose how you want to add a photo.', [
+      { text: 'Take Photo', onPress: takePhoto },
+      { text: 'Choose from Library', onPress: pickFromLibrary },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const handlePost = async () => {
@@ -264,7 +291,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
               <Text style={styles.sectionLabel}>Photo</Text>
               <TouchableOpacity
                 style={[styles.imagePicker, image ? styles.imagePickerFilled : null]}
-                onPress={pickImage}
+                onPress={choosePhotoSource}
                 activeOpacity={0.7}
               >
                 {image ? (
@@ -281,7 +308,7 @@ export default function PostScreen({ onBack }: PostScreenProps) {
                       <AntDesign name="camera" size={24} color={COLORS.accent} />
                     </View>
                     <Text style={styles.imagePickerTitle}>Add a photo</Text>
-                    <Text style={styles.imagePickerSubtitle}>Tap to browse your camera roll</Text>
+                    <Text style={styles.imagePickerSubtitle}>Take a photo or choose from your library</Text>
                   </View>
                 )}
               </TouchableOpacity>

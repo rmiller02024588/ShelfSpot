@@ -41,8 +41,12 @@ jest.mock('../lib/auth', () => ({
 
 jest.mock('expo-image-picker', () => ({
   requestMediaLibraryPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
+  requestCameraPermissionsAsync: jest.fn(() => Promise.resolve({ granted: true })),
   launchImageLibraryAsync: jest.fn(() =>
     Promise.resolve({ canceled: false, assets: [{ uri: 'file://test.jpg' }] })
+  ),
+  launchCameraAsync: jest.fn(() =>
+    Promise.resolve({ canceled: false, assets: [{ uri: 'file://camera.jpg' }] })
   ),
 }));
 

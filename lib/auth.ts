@@ -1,12 +1,28 @@
 import type { Provider, User } from '@supabase/supabase-js';
 import { makeRedirectUri } from 'expo-auth-session';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../Supabaseconfig';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Parse query + hash params from an OAuth redirect URL (avoids private expo-auth-session paths). */
+function getQueryParams(input: string): { params: Record<string, string>; errorCode: string | null } {
+  const url = new URL(input, 'https://phony.example');
+  const errorCode = url.searchParams.get('errorCode') ?? url.searchParams.get('error');
+  url.searchParams.delete('errorCode');
+  url.searchParams.delete('error');
+
+  const params: Record<string, string> = Object.fromEntries(url.searchParams.entries());
+  if (url.hash) {
+    new URLSearchParams(url.hash.replace(/^#/, '')).forEach((value, key) => {
+      params[key] = value;
+    });
+  }
+
+  return { params, errorCode };
+}
 
 export function isValidEmail(email: string): boolean {
   return EMAIL_REGEX.test(email.trim());
@@ -58,8 +74,15 @@ export function getAvatarUrl(user: User | null): string | null {
 }
 
 async function createSessionFromUrl(url: string) {
-  const { params, errorCode } = QueryParams.getQueryParams(url);
+  const { params, errorCode } = getQueryParams(url);
   if (errorCode) throw new Error(errorCode);
+
+  // PKCE flow (default for supabase-js): exchange auth code for a session
+  if (params.code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(params.code);
+    if (error) throw error;
+    return data.session;
+  }
 
   const { access_token, refresh_token } = params;
   if (!access_token) return null;
@@ -103,30 +126,33 @@ export async function signInWithOAuthProvider(provider: Extract<Provider, 'googl
 export async function syncProfileFromUser(user: User): Promise<void> {
   const displayName = resolveDisplayName(user);
   const avatarUrl = getAvatarUrl(user);
-  if (!user.email) return;
+  const email = user.email?.trim() || `${user.id}@users.noreply`;
 
   const { data: existing } = await supabase
     .from('profiles')
-    .select('display_name, avatar_url')
+    .select('display_name, avatar_url, email')
     .eq('id', user.id)
     .maybeSingle();
 
   if (!existing) {
     await supabase.from('profiles').upsert({
       id: user.id,
-      email: user.email,
+      email,
       display_name: displayName,
       avatar_url: avatarUrl,
     });
     return;
   }
 
-  const updates: { display_name?: string; avatar_url?: string } = {};
+  const updates: { display_name?: string; avatar_url?: string; email?: string } = {};
   if (displayName && existing.display_name !== displayName) {
     updates.display_name = displayName;
   }
   if (avatarUrl && existing.avatar_url !== avatarUrl) {
     updates.avatar_url = avatarUrl;
+  }
+  if (user.email && existing.email !== user.email) {
+    updates.email = user.email;
   }
 
   if (Object.keys(updates).length > 0) {
@@ -144,4 +170,22 @@ export function onAuthStateChanged(callback: (user: User | null) => void) {
 export async function getCurrentUser(): Promise<User | null> {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.user ?? null;
+}
+
+/**
+ * Permanently delete the signed-in user's account and related data.
+ * Requires the `delete_own_account` RPC from supabase/schema.sql.
+ */
+export async function deleteOwnAccount(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: 'Not signed in' };
+
+  const { error } = await supabase.rpc('delete_own_account');
+  if (error) {
+    console.error('Error deleting account:', error);
+    return { ok: false, error: error.message };
+  }
+
+  await supabase.auth.signOut();
+  return { ok: true };
 }

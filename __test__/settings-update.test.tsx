@@ -10,6 +10,7 @@ jest.mock('../lib/auth', () => ({
   getDisplayName: jest.fn(() => 'User'),
   getAvatarUrl: jest.fn(() => null),
   syncProfileFromUser: jest.fn(() => Promise.resolve()),
+  deleteOwnAccount: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
 jest.mock('../Supabaseconfig', () => ({
@@ -80,5 +81,13 @@ test('renders change password section', async () => {
     expect(getByPlaceholderText('New password')).toBeTruthy();
     expect(getByPlaceholderText('Confirm new password')).toBeTruthy();
     expect(getByText('Update Password')).toBeTruthy();
+  });
+});
+
+test('renders delete account button', async () => {
+  const { getByText } = await render(<SettingsScreen />);
+
+  await waitFor(() => {
+    expect(getByText('Delete Account')).toBeTruthy();
   });
 });
